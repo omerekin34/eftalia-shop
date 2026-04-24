@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, User, ShoppingBag, Menu, X, LogIn, RotateCcw, Heart, Package, Mail } from 'lucide-react'
+import { Search, User, ShoppingBag, Menu, X, LogIn, Heart, Package, Mail, ChevronRight, Minus, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
-import Image from 'next/image'
+import { useCart } from '@/components/storefront/cart-context'
 
 const menuCategories = [
   { name: 'TÜM ÜRÜNLER', href: '/tum-urunler' },
@@ -20,9 +20,8 @@ const menuCategories = [
 const accountLinks = [
   { name: 'Hesabım', href: '/hesabim', icon: User },
   { name: 'Üye Girişi / Üye Ol', href: '/giris', icon: LogIn },
-  { name: 'Kolay İade', href: '/iade', icon: RotateCcw },
-  { name: 'Favorilerim', href: '/favoriler', icon: Heart },
-  { name: 'Siparişlerim', href: '/siparislerim', icon: Package },
+  { name: 'Favorilerim', href: '/hesabim/favoriler', icon: Heart },
+  { name: 'Siparişlerim', href: '/hesabim/siparisler', icon: Package },
   { name: 'İletişim', href: '/iletisim', icon: Mail },
 ]
 
@@ -53,7 +52,10 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isCartOpen, setIsCartOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const { items, totalItems, removeItem, updateItemQuantity } = useCart()
+  const cartTotalAmount = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
 
   const filteredSearchCategories = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase('tr')
@@ -73,7 +75,7 @@ export function Navbar() {
 
   // Lock body scroll when full-screen panels are open
   useEffect(() => {
-    if (isMobileMenuOpen || isSearchOpen) {
+    if (isMobileMenuOpen || isSearchOpen || isCartOpen) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
@@ -81,7 +83,7 @@ export function Navbar() {
     return () => {
       document.body.style.overflow = ''
     }
-  }, [isMobileMenuOpen, isSearchOpen])
+  }, [isMobileMenuOpen, isSearchOpen, isCartOpen])
 
   return (
     <>
@@ -133,19 +135,21 @@ export function Navbar() {
               >
                 <Search className="h-5 w-5 text-bronze transition-colors group-hover:text-gold" strokeWidth={1.5} />
               </button>
-              <button 
+              <Link
+                href="/giris"
                 className="group hidden p-2 transition-colors sm:block"
-                aria-label="Hesabım"
+                aria-label="Üye girişi"
               >
                 <User className="h-5 w-5 text-bronze transition-colors group-hover:text-gold" strokeWidth={1.5} />
-              </button>
-              <button 
+              </Link>
+              <button
+                onClick={() => setIsCartOpen(true)}
                 className="group relative p-2 transition-colors"
                 aria-label="Alışveriş çantası"
               >
                 <ShoppingBag className="h-5 w-5 text-bronze transition-colors group-hover:text-gold" strokeWidth={1.5} />
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose text-[9px] font-medium text-bronze-dark">
-                  0
+                  {totalItems}
                 </span>
               </button>
             </div>
@@ -237,6 +241,141 @@ export function Navbar() {
       </AnimatePresence>
 
       <AnimatePresence>
+        {isCartOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[64] bg-black/35"
+              onClick={() => setIsCartOpen(false)}
+            />
+
+            <motion.aside
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed right-0 top-0 z-[65] h-full w-full max-w-md border-l border-bronze/15 bg-background shadow-2xl"
+            >
+              <div className="flex h-full flex-col">
+                <div className="flex items-center justify-between border-b border-bronze/10 px-5 py-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-bronze-dark">Sepetim</h3>
+                    <p className="text-xs text-bronze/55">{totalItems} ürün</p>
+                  </div>
+                  <button
+                    onClick={() => setIsCartOpen(false)}
+                    className="rounded-md p-2 text-bronze/70 transition-colors hover:bg-ivory-warm hover:text-bronze"
+                    aria-label="Sepeti kapat"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-5 py-4">
+                  {items.length === 0 ? (
+                    <div className="rounded-xl border border-bronze/15 bg-ivory-warm p-5 text-center">
+                      <p className="text-sm text-bronze/70">Sepetiniz şu anda boş.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {items.map((item) => (
+                        <div key={`${item.id}-${item.color || 'renksiz'}`} className="rounded-xl border border-bronze/15 bg-ivory-warm p-4">
+                          <div className="flex gap-3">
+                            <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-bronze/15 bg-white">
+                              {item.image ? (
+                                <Image
+                                  src={item.image}
+                                  alt={item.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-full items-center justify-center text-xs text-bronze/45">
+                                  Görsel
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-bronze-dark">{item.name}</p>
+                              <p className="mt-1 text-xs text-bronze/60">
+                                {item.color ? `Renk: ${item.color}` : 'Standart'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between">
+                            <div className="flex items-center border border-bronze/20 bg-white">
+                              <button
+                                onClick={() =>
+                                  updateItemQuantity(item.id, item.color, Math.max(1, item.quantity - 1))
+                                }
+                                className="p-2 text-bronze/75"
+                                aria-label="Adet azalt"
+                              >
+                                <Minus className="h-3.5 w-3.5" />
+                              </button>
+                              <span className="w-8 text-center text-sm text-bronze">{item.quantity}</span>
+                              <button
+                                onClick={() =>
+                                  updateItemQuantity(item.id, item.color, item.quantity + 1)
+                                }
+                                className="p-2 text-bronze/75"
+                                aria-label="Adet artır"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-medium text-bronze-dark">
+                                {(item.price * item.quantity).toLocaleString('tr-TR')} TL
+                              </span>
+                              <button
+                                onClick={() => removeItem(item.id, item.color)}
+                                className="text-bronze/55 transition-colors hover:text-rose"
+                                aria-label="Ürünü kaldır"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-bronze/10 px-5 py-4">
+                  <div className="mb-3 flex items-center justify-between text-sm">
+                    <span className="text-bronze/65">Toplam</span>
+                    <span className="font-semibold text-bronze-dark">
+                      {cartTotalAmount.toLocaleString('tr-TR')} TL
+                    </span>
+                  </div>
+                  <Link
+                    href="/odeme"
+                    onClick={() => setIsCartOpen(false)}
+                    className="block rounded-md bg-bronze px-4 py-3 text-center text-sm font-medium uppercase tracking-wide text-white transition-colors hover:bg-bronze-dark"
+                  >
+                    Ödemeyi Tamamla
+                  </Link>
+                  <Link
+                    href="/tum-urunler"
+                    onClick={() => setIsCartOpen(false)}
+                    className="mt-2 block rounded-md border border-bronze/25 px-4 py-3 text-center text-sm font-medium uppercase tracking-wide text-bronze transition-colors hover:bg-ivory-warm"
+                  >
+                    Alışverişe Geri Dön
+                  </Link>
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {isMobileMenuOpen && (
           <>
             {/* Backdrop */}
@@ -303,6 +442,11 @@ export function Navbar() {
 
               {/* Account Links */}
               <div className="px-6 py-6">
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-bronze/50">
+                    Hesap İşlemleri
+                  </p>
+                </div>
                 <ul className="space-y-1">
                   {accountLinks.map((item, i) => (
                     <motion.li
@@ -311,14 +455,36 @@ export function Navbar() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.5 + i * 0.05, duration: 0.3 }}
                     >
+                      {item.name === 'Üye Girişi / Üye Ol' ? (
+                        <Link
+                          href={item.href}
+                          className="group flex items-center justify-between rounded-lg border border-bronze/20 bg-ivory-warm px-4 py-3.5 transition-all hover:border-bronze/40 hover:bg-ivory"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="rounded-md bg-bronze/10 p-2 text-bronze">
+                              <item.icon className="h-5 w-5" strokeWidth={1.7} />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[15px] font-medium text-bronze-dark">{item.name}</span>
+                              <span className="text-xs text-bronze/60">Sipariş ve favori takibi için giriş yapın</span>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-bronze/40 transition-transform group-hover:translate-x-0.5" />
+                        </Link>
+                      ) : (
                       <Link 
                         href={item.href}
-                        className="flex items-center gap-3 py-3 text-[15px] text-bronze transition-colors hover:text-gold"
+                        className="group flex items-center justify-between rounded-md px-2 py-3 text-[15px] text-bronze transition-colors hover:bg-ivory-warm hover:text-gold"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        <item.icon className="h-5 w-5" strokeWidth={1.5} />
-                        <span>{item.name}</span>
+                        <span className="flex items-center gap-3">
+                          <item.icon className="h-5 w-5" strokeWidth={1.5} />
+                          <span>{item.name}</span>
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-bronze/30 transition-transform group-hover:translate-x-0.5" />
                       </Link>
+                      )}
                     </motion.li>
                   ))}
                 </ul>
@@ -326,14 +492,12 @@ export function Navbar() {
 
               {/* Footer Brand */}
               <div className="mt-auto border-t border-bronze/10 px-6 py-6">
-                <Image
-                  src="/images/logo.jpg"
-                  alt="B'ETUI EFTELIA"
-                  width={60}
-                  height={60}
-                  className="h-14 w-14 object-contain"
-                />
-                <p className="mt-3 text-xs tracking-wider text-bronze/40">
+                <div className="inline-flex items-center rounded-md border border-bronze/20 bg-ivory-warm px-4 py-2.5">
+                  <span className="font-serif text-2xl tracking-[0.2em] text-bronze-dark">
+                    B&amp;E
+                  </span>
+                </div>
+                <p className="mt-3 text-xs tracking-[0.25em] text-bronze/45">
                   HER DETAYDA ZARAFET
                 </p>
               </div>

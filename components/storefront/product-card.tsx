@@ -24,6 +24,7 @@ interface Product {
   colors: ProductColor[]
   isNew?: boolean
   isBestseller?: boolean
+  inStock?: boolean
 }
 
 interface ProductCardProps {
@@ -53,7 +54,7 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image Container */}
-      <Link href={`/urun/${product.slug}`} className="relative block aspect-[3/4] overflow-hidden bg-white">
+      <Link href={`/product/${product.slug}`} className="relative block aspect-[3/4] overflow-hidden bg-white">
         {/* Primary Image */}
         <div className="absolute inset-0">
           {product.images[0] ? (
@@ -160,7 +161,7 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
 
       {/* Product Info */}
       <div className="mt-3 space-y-1">
-        <Link href={`/urun/${product.slug}`}>
+        <Link href={`/product/${product.slug}`}>
           <h3 className="line-clamp-2 text-xs text-bronze transition-colors group-hover:text-bronze-dark sm:text-sm">
             {product.name}
           </h3>
@@ -176,6 +177,9 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
             {formatPrice(product.price)}
           </span>
         </div>
+        <p className={`text-xs ${product.inStock === false ? 'text-[#c41e3a]' : 'text-bronze/55'}`}>
+          {product.inStock === false ? 'Tükendi' : 'Stokta'}
+        </p>
       </div>
     </motion.article>
   )

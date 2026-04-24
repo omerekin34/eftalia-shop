@@ -6,7 +6,6 @@ const marqueeItems = [
   'EL YAPIMI DERİ ÜRÜNLER',
   "B'ETUI EFTELIA",
   'KÜRESEL LÜKS',
-  '2026&apos;DAN BERİ',
   'USTA ELLERİNDEN',
   'ZAMANSIZ ZARAFET',
 ]

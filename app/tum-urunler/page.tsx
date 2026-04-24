@@ -11,6 +11,7 @@ import { ProductCard } from '@/components/storefront/product-card'
 import { FilterSidebar } from '@/components/storefront/filter-sidebar'
 import { MobileFilterSheet } from '@/components/storefront/mobile-filter-sheet'
 import { CategoryCarousel } from '@/components/storefront/category-carousel'
+import { getProducts } from '@/lib/shopify/getProducts'
 
 
 // Product data structure for Shopify integration later
@@ -25,8 +26,11 @@ export interface Product {
   category: string
   subcategory: string
   colors: { name: string; hex: string }[]
+  tags?: string[]
+  collections?: Array<{ id: string; title: string; handle: string }>
   isNew?: boolean
   isBestseller?: boolean
+  inStock?: boolean
 }
 
 // Categories structure
@@ -95,197 +99,52 @@ const sortOptions = [
   { value: 'discount', label: 'İndirim Oranı' },
 ]
 
-// Mock products data (will be replaced with Shopify data)
-const mockProducts: Product[] = [
-  {
-    id: '1',
-    name: 'Mari Vintage Baget Çanta',
-    slug: 'mari-vintage-baget-canta-mint',
-    price: 579.90,
-    originalPrice: 1449.75,
-    discount: 60,
-    images: ['/images/products/bag-1.jpg', '/images/products/bag-1-hover.jpg'],
-    category: 'canta',
-    subcategory: 'Baget Çanta',
-    colors: [
-      { name: 'Mint', hex: '#98D4BB' },
-      { name: 'Krem', hex: '#F5F5DC' },
-      { name: 'Pudra', hex: '#E8D5D5' },
-    ],
-    isNew: true,
-    isBestseller: true,
-  },
-  {
-    id: '2',
-    name: 'Lina Çapraz Çanta',
-    slug: 'lina-capraz-canta-mint',
-    price: 429.90,
-    originalPrice: 1074.75,
-    discount: 60,
-    images: ['/images/products/bag-2.jpg', '/images/products/bag-2-hover.jpg'],
-    category: 'canta',
-    subcategory: 'Çapraz Çanta',
-    colors: [
-      { name: 'Mint', hex: '#98D4BB' },
-      { name: 'Siyah', hex: '#1a1a1a' },
-    ],
-    isNew: true,
-    isBestseller: true,
-  },
-  {
-    id: '3',
-    name: 'Giglio Spor Omuz Çantası',
-    slug: 'giglio-spor-omuz-cantasi',
-    price: 729.90,
-    originalPrice: 1824.75,
-    discount: 60,
-    images: ['/images/products/bag-3.jpg', '/images/products/bag-3-hover.jpg'],
-    category: 'canta',
-    subcategory: 'Omuz Çantası',
-    colors: [
-      { name: 'Siyah', hex: '#1a1a1a' },
-      { name: 'Kahve', hex: '#5C4033' },
-      { name: 'Bej', hex: '#D4C4A8' },
-    ],
-    isBestseller: true,
-  },
-  {
-    id: '4',
-    name: 'Napa Cepli Teknik Spor Çanta',
-    slug: 'napa-cepli-teknik-spor-canta',
-    price: 899.90,
-    originalPrice: 2249.75,
-    discount: 60,
-    images: ['/images/products/bag-4.jpg', '/images/products/bag-4-hover.jpg'],
-    category: 'canta',
-    subcategory: 'Spor Çantası',
-    colors: [
-      { name: 'Siyah', hex: '#1a1a1a' },
-      { name: 'Vizon', hex: '#8B7355' },
-    ],
-  },
-  {
-    id: '5',
-    name: 'Elegance Kadın Cüzdan',
-    slug: 'elegance-kadin-cuzdan',
-    price: 349.90,
-    originalPrice: 699.80,
-    discount: 50,
-    images: ['/images/products/wallet-1.jpg', '/images/products/wallet-1-hover.jpg'],
-    category: 'cuzdan-kartlik',
-    subcategory: 'Kadın Cüzdan',
-    colors: [
-      { name: 'Krem', hex: '#F5F5DC' },
-      { name: 'Pudra', hex: '#E8D5D5' },
-      { name: 'Taba', hex: '#A67B5B' },
-    ],
-    isNew: true,
-    isBestseller: true,
-  },
-  {
-    id: '6',
-    name: 'Premium Kartlık',
-    slug: 'premium-kartlik',
-    price: 199.90,
-    originalPrice: 399.80,
-    discount: 50,
-    images: ['/images/products/cardholder-1.jpg', '/images/products/cardholder-1-hover.jpg'],
-    category: 'cuzdan-kartlik',
-    subcategory: 'Kartlık',
-    colors: [
-      { name: 'Siyah', hex: '#1a1a1a' },
-      { name: 'Kahve', hex: '#5C4033' },
-    ],
-  },
-  {
-    id: '7',
-    name: 'El Yapımı Ahşap Tarak',
-    slug: 'el-yapimi-ahsap-tarak',
-    price: 149.90,
-    images: ['/images/products/comb-1.jpg', '/images/products/comb-1-hover.jpg'],
-    category: 'tarak',
-    subcategory: 'Ahşap Tarak',
-    colors: [
-      { name: 'Taba', hex: '#A67B5B' },
-    ],
-  },
-  {
-    id: '8',
-    name: 'Vintage Kemik Tarak',
-    slug: 'vintage-kemik-tarak',
-    price: 249.90,
-    images: ['/images/products/comb-2.jpg', '/images/products/comb-2-hover.jpg'],
-    category: 'tarak',
-    subcategory: 'Kemik Tarak',
-    colors: [
-      { name: 'Krem', hex: '#F5F5DC' },
-    ],
-    isNew: true,
-  },
-  {
-    id: '9',
-    name: 'Farme Monogram Baget Çanta',
-    slug: 'farme-monogram-baget-canta',
-    price: 399.90,
-    originalPrice: 999.75,
-    discount: 60,
-    images: ['/images/products/bag-5.jpg', '/images/products/bag-5-hover.jpg'],
-    category: 'canta',
-    subcategory: 'Baget Çanta',
-    colors: [
-      { name: 'Antrasit', hex: '#383838' },
-      { name: 'Kahve', hex: '#5C4033' },
-    ],
-    isBestseller: true,
-  },
-  {
-    id: '10',
-    name: 'Classic El Çantası',
-    slug: 'classic-el-cantasi',
-    price: 649.90,
-    originalPrice: 1299.80,
-    discount: 50,
-    images: ['/images/products/bag-6.jpg', '/images/products/bag-6-hover.jpg'],
-    category: 'canta',
-    subcategory: 'El Çantası',
-    colors: [
-      { name: 'Siyah', hex: '#1a1a1a' },
-      { name: 'Vizon', hex: '#8B7355' },
-      { name: 'Krem', hex: '#F5F5DC' },
-    ],
-  },
-  {
-    id: '11',
-    name: 'Urban Sırt Çantası',
-    slug: 'urban-sirt-cantasi',
-    price: 799.90,
-    originalPrice: 1599.80,
-    discount: 50,
-    images: ['/images/products/bag-7.jpg', '/images/products/bag-7-hover.jpg'],
-    category: 'canta',
-    subcategory: 'Sırt Çantası',
-    colors: [
-      { name: 'Siyah', hex: '#1a1a1a' },
-      { name: 'Antrasit', hex: '#383838' },
-    ],
-    isNew: true,
-  },
-  {
-    id: '12',
-    name: 'Executive Erkek Cüzdan',
-    slug: 'executive-erkek-cuzdan',
-    price: 449.90,
-    originalPrice: 899.80,
-    discount: 50,
-    images: ['/images/products/wallet-2.jpg', '/images/products/wallet-2-hover.jpg'],
-    category: 'cuzdan-kartlik',
-    subcategory: 'Erkek Cüzdan',
-    colors: [
-      { name: 'Siyah', hex: '#1a1a1a' },
-      { name: 'Kahve', hex: '#5C4033' },
-    ],
-  },
-]
+const normalizeForSearch = (value: string) =>
+  (value || '')
+    .toLocaleLowerCase('tr')
+    .replace(/ç/g, 'c')
+    .replace(/ğ/g, 'g')
+    .replace(/ı/g, 'i')
+    .replace(/i̇/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ş/g, 's')
+    .replace(/ü/g, 'u')
+    .replace(/â/g, 'a')
+    .replace(/î/g, 'i')
+    .replace(/û/g, 'u')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const matchesFilterToken = (filterToken: string, product: Product) => {
+  const normalizedToken = normalizeForSearch(filterToken)
+  if (!normalizedToken) return false
+
+  const normalizedCollections = (product.collections || []).flatMap((collection) => [
+    normalizeForSearch(collection.title || ''),
+    normalizeForSearch(collection.handle || ''),
+  ])
+  const normalizedTags = (product.tags || []).map((tag) => normalizeForSearch(tag || ''))
+
+  const inCollections = normalizedCollections.includes(normalizedToken)
+  const inTags = normalizedTags.includes(normalizedToken)
+
+  // Backward compatibility with legacy local subcategory/category mapping.
+  const inLegacyFields = [
+    normalizeForSearch(product.subcategory || ''),
+    normalizeForSearch(product.category || ''),
+  ].includes(normalizedToken)
+
+  return inCollections || inTags || inLegacyFields
+}
+
+const safeDecodeURIComponent = (value: string) => {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
 
  function ProductsContent() {
   const searchParams = useSearchParams()
@@ -299,6 +158,28 @@ const mockProducts: Product[] = [
   const [customPriceMin, setCustomPriceMin] = useState('')
   const [customPriceMax, setCustomPriceMax] = useState('')
   const [activeFilter, setActiveFilter] = useState<'yeni' | 'cok-satanlar' | 'outlet' | null>(null)
+  const [products, setProducts] = useState<Product[]>([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+  const [productsError, setProductsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setIsLoadingProducts(true)
+        setProductsError(null)
+        const shopifyProducts = await getProducts(48)
+        setProducts(shopifyProducts)
+      } catch (error) {
+        setProductsError(
+          error instanceof Error ? error.message : 'Ürünler yüklenirken bir hata oluştu.'
+        )
+      } finally {
+        setIsLoadingProducts(false)
+      }
+    }
+
+    loadProducts()
+  }, [])
 
   // Read URL parameters and apply filters
   useEffect(() => {
@@ -343,50 +224,74 @@ const mockProducts: Product[] = [
         'sac-fircasi': 'Saç Fırçası',
         'cuzdan-kartlik': 'cuzdan-kartlik',
       }
-      if (kategori === 'cuzdan-kartlik') {
+      const decodedKategori = safeDecodeURIComponent(kategori)
+      const normalizedKategori = normalizeForSearch(decodedKategori)
+
+      if (normalizedKategori === 'cuzdan-kartlik') {
         setSelectedCategories(['cuzdan-kartlik'])
-      } else if (categoryMap[kategori]) {
-        setSelectedSubcategories([categoryMap[kategori]])
+      } else {
+        const matchedSubcategory = Object.entries(categoryMap).find(([key, value]) => {
+          const normalizedKey = normalizeForSearch(key)
+          const normalizedValue = normalizeForSearch(value)
+          return (
+            normalizedKey === normalizedKategori ||
+            normalizedValue === normalizedKategori
+          )
+        })?.[1]
+
+        if (matchedSubcategory) {
+          setSelectedSubcategories([matchedSubcategory])
+        }
       }
     }
   }, [searchParams])
 
   // Get bestsellers for carousel
-  const bestsellers = mockProducts.filter(p => p.isBestseller || p.discount && p.discount >= 50)
+  const bestsellers = products.filter(
+    (p) => p.inStock && (p.isBestseller || (p.discount && p.discount >= 50))
+  )
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
-    let products = [...mockProducts]
+    let productsToFilter = products.filter((p) => p.inStock)
 
     // Filter by URL-based active filter
     if (activeFilter === 'yeni') {
-      products = products.filter(p => p.isNew === true)
+      productsToFilter = productsToFilter.filter(p => p.isNew === true)
     } else if (activeFilter === 'cok-satanlar') {
-      products = products.filter(p => p.isBestseller === true)
+      productsToFilter = productsToFilter.filter(p => p.isBestseller === true)
     } else if (activeFilter === 'outlet') {
-      products = products.filter(p => p.discount && p.discount >= 50)
+      productsToFilter = productsToFilter.filter(p => p.discount && p.discount >= 50)
     }
 
     // Filter by category
     if (selectedCategories.length > 0) {
-      products = products.filter(p => selectedCategories.includes(p.category))
+      const normalizedSelectedCategories = selectedCategories.map(normalizeForSearch)
+      productsToFilter = productsToFilter.filter((p) =>
+        normalizedSelectedCategories.includes(normalizeForSearch(p.category || ''))
+      )
     }
 
     // Filter by subcategory
     if (selectedSubcategories.length > 0) {
-      products = products.filter(p => selectedSubcategories.includes(p.subcategory))
+      productsToFilter = productsToFilter.filter((p) =>
+        selectedSubcategories.some((selected) => matchesFilterToken(selected, p))
+      )
     }
 
     // Filter by color
     if (selectedColors.length > 0) {
-      products = products.filter(p => 
-        p.colors.some(c => selectedColors.includes(c.name))
+      const normalizedSelectedColors = selectedColors.map(normalizeForSearch)
+      productsToFilter = productsToFilter.filter((p) =>
+        p.colors.some((c) =>
+          normalizedSelectedColors.includes(normalizeForSearch(c.name || ''))
+        )
       )
     }
 
     // Filter by price range
     if (selectedPriceRange) {
-      products = products.filter(p => 
+      productsToFilter = productsToFilter.filter(p => 
         p.price >= selectedPriceRange.min && p.price <= selectedPriceRange.max
       )
     }
@@ -394,24 +299,24 @@ const mockProducts: Product[] = [
     // Sort
     switch (selectedSort) {
       case 'price-asc':
-        products.sort((a, b) => a.price - b.price)
+        productsToFilter.sort((a, b) => a.price - b.price)
         break
       case 'price-desc':
-        products.sort((a, b) => b.price - a.price)
+        productsToFilter.sort((a, b) => b.price - a.price)
         break
       case 'bestseller':
-        products.sort((a, b) => (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0))
+        productsToFilter.sort((a, b) => (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0))
         break
       case 'discount':
-        products.sort((a, b) => (b.discount || 0) - (a.discount || 0))
+        productsToFilter.sort((a, b) => (b.discount || 0) - (a.discount || 0))
         break
       case 'newest':
       default:
-        products.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0))
+        productsToFilter.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0))
     }
 
-    return products
-  }, [activeFilter, selectedCategories, selectedSubcategories, selectedColors, selectedPriceRange, selectedSort])
+    return productsToFilter
+  }, [activeFilter, products, selectedCategories, selectedSubcategories, selectedColors, selectedPriceRange, selectedSort])
 
   const clearFilters = () => {
     setActiveFilter(null)
@@ -602,7 +507,15 @@ const mockProducts: Product[] = [
 
           {/* Product Grid */}
           <div className="flex-1">
-            {filteredProducts.length === 0 ? (
+            {isLoadingProducts ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-lg text-bronze/60">Shopify ürünleri yükleniyor...</p>
+              </div>
+            ) : productsError ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-lg text-bronze/60">{productsError}</p>
+              </div>
+            ) : filteredProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <p className="text-lg text-bronze/60">Aradığınız kriterlere uygun ürün bulunamadı.</p>
                 <button

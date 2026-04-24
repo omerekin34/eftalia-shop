@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Instagram, MapPin } from 'lucide-react'
 import Link from 'next/link'
-import Image from 'next/image'
 
 const footerLinks = {
   shop: [
@@ -15,16 +14,16 @@ const footerLinks = {
     { label: 'Yeni Gelenler', href: '/tum-urunler?yeni=true' },
   ],
   about: [
-    { label: 'Hikayemiz', href: '#' },
-    { label: 'Zanaatımız', href: '#' },
-    { label: 'Malzemeler', href: '#' },
-    { label: 'Sürdürülebilirlik', href: '#' },
+    { label: 'Hikayemiz', href: '/hakkimizda/hikayemiz' },
+    { label: 'Zanaatımız', href: '/hakkimizda/zanaatimiz' },
+    { label: 'Malzemeler', href: '/hakkimizda/malzemeler' },
+    { label: 'Sürdürülebilirlik', href: '/hakkimizda/surdurulebilirlik' },
   ],
   support: [
     { label: 'İletişim', href: '/iletisim' },
-    { label: 'Kargo', href: '#' },
-    { label: 'İade', href: '#' },
-    { label: 'Bakım Rehberi', href: '#' },
+    { label: 'Kargo', href: '/kargo' },
+    { label: 'İade', href: '/iade' },
+    { label: 'Bakım Rehberi', href: '/bakim-rehberi' },
   ],
 }
 
@@ -57,11 +56,15 @@ export function Footer() {
             transition={{ duration: 0.8 }}
             className="flex flex-col items-center text-center"
           >
-            <h3 className="font-serif text-2xl tracking-wide text-bronze sm:text-3xl">
-              Atölyemize Katılın
+            <p className="text-xs uppercase tracking-[0.25em] text-bronze/60">
+              Eftelia Kulübü
+            </p>
+            <h3 className="mt-2 font-serif text-2xl tracking-wide text-bronze sm:text-3xl">
+              Koleksiyonlardan İlk Sen Haberdar Ol
             </h3>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-bronze-light">
-              Yeni koleksiyonlara özel erişim, zanaat hikayeleri ve sadece üyelere özel fırsatlar için abone olun.
+              Yeni ürün duyuruları, sınırlı stok bildirimleri ve sadece üyeler için hazırlanan
+              özel fırsatları e-posta ile paylaşalım.
             </p>
             
             <form onSubmit={handleSubmit} className="mt-8 w-full max-w-md">
@@ -70,7 +73,7 @@ export function Footer() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="E-posta adresinizi girin"
+                  placeholder="E-posta adresiniz"
                   className="w-full border-b-2 border-bronze/30 bg-transparent py-3 pr-12 text-bronze placeholder:text-bronze-light/60 focus:border-gold focus:outline-none"
                   disabled={isSubscribed}
                 />
@@ -81,12 +84,15 @@ export function Footer() {
                   aria-label="Abone ol"
                 >
                   {isSubscribed ? (
-                    <span className="text-sm text-gold">Abone Oldunuz</span>
+                    <span className="text-sm text-gold">Kulübe Katıldınız</span>
                   ) : (
                     <ArrowRight className={`h-5 w-5 ${isSubmitting ? 'animate-pulse' : ''}`} strokeWidth={1.5} />
                   )}
                 </button>
               </div>
+              <p className="mt-3 text-xs text-bronze/55">
+                Kayıt olarak bilgilendirme e-postalarını almayı kabul etmiş olursunuz.
+              </p>
             </form>
           </motion.div>
         </div>
@@ -98,13 +104,14 @@ export function Footer() {
           {/* Brand column */}
           <div className="lg:col-span-2">
             <Link href="/" className="inline-block">
-              <Image
-                src="/images/logo.jpg"
-                alt="B'ETUI EFTELIA"
-                width={80}
-                height={80}
-                className="h-20 w-20 object-contain"
-              />
+              <div className="inline-flex flex-col items-center rounded-md border border-bronze/15 bg-background/70 px-6 py-4 backdrop-blur-[1px]">
+                <span className="font-serif text-2xl tracking-[0.28em] text-bronze-dark sm:text-3xl">
+                  B&apos;ETUI EFTELIA
+                </span>
+                <span className="mt-1 text-[10px] tracking-[0.35em] text-rose sm:text-xs">
+                  LEATHER GOODS
+                </span>
+              </div>
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-bronze-light">
               Detayın sanatı. El yapımı deri ürünlerde küresel standartlar, geleneğin çağdaş zarafetle buluştuğu yer.

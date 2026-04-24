@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export function Hero() {
   return (
@@ -72,15 +73,21 @@ export function Hero() {
               transition={{ delay: 0.6, duration: 0.8 }}
               className="mt-8 flex flex-col items-center gap-4 sm:flex-row lg:justify-start"
             >
-              <button className="group relative overflow-hidden border border-bronze px-8 py-3 transition-all duration-300 hover:border-rose hover:bg-rose sm:px-10 sm:py-4">
+              <Link
+                href="/tum-urunler"
+                className="group relative overflow-hidden border border-bronze px-8 py-3 transition-all duration-300 hover:border-rose hover:bg-rose sm:px-10 sm:py-4"
+              >
                 <span className="relative z-10 flex items-center gap-2 text-sm tracking-[0.2em] text-bronze transition-colors group-hover:text-bronze-dark">
                   KOLEKSİYONU KEŞFET
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
                 </span>
-              </button>
-              <button className="text-sm tracking-[0.15em] text-bronze-light underline underline-offset-4 transition-colors hover:text-gold">
+              </Link>
+              <Link
+                href="/lookbook"
+                className="text-sm tracking-[0.15em] text-bronze-light underline underline-offset-4 transition-colors hover:text-gold"
+              >
                 LOOKBOOK İNCELE
-              </button>
+              </Link>
             </motion.div>
           </motion.div>
 

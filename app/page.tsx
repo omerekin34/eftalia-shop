@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Navbar } from '@/components/storefront/navbar'
 import { Hero } from '@/components/storefront/hero'
@@ -7,8 +8,55 @@ import { CategoryGrid } from '@/components/storefront/category-grid'
 import { CraftShowcase } from '@/components/storefront/craft-showcase'
 import { Marquee } from '@/components/storefront/marquee'
 import { Footer } from '@/components/storefront/footer'
+import { ProductCard } from '@/components/storefront/product-card'
+import { getProducts } from '@/lib/shopify/getProducts'
+
+interface HomeProduct {
+  id: string
+  name: string
+  slug: string
+  price: number
+  originalPrice?: number
+  discount?: number
+  images: string[]
+  category: string
+  subcategory: string
+  colors: { name: string; hex: string }[]
+  isNew?: boolean
+  isBestseller?: boolean
+  inStock?: boolean
+}
 
 export default function Home() {
+  const [products, setProducts] = useState<HomeProduct[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setIsLoading(true)
+        const shopifyProducts = await getProducts(24)
+        const inStockProducts = shopifyProducts.filter((item) => item.inStock !== false)
+
+        // Makyaj çantasını vitrinde önceliklendir.
+        const makeup = inStockProducts.find(
+          (item) =>
+            (item.slug || '').includes('makyaj-cantasi') ||
+            (item.name || '').toLocaleLowerCase('tr').includes('makyaj çanta')
+        )
+        const rest = inStockProducts.filter((item) => item.id !== makeup?.id)
+        const showcase = makeup ? [makeup, ...rest].slice(0, 8) : inStockProducts.slice(0, 8)
+
+        setProducts(showcase as HomeProduct[])
+      } catch {
+        setProducts([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadProducts()
+  }, [])
+
   return (
     <motion.main
       initial={{ opacity: 0 }}
@@ -18,6 +66,30 @@ export default function Home() {
     >
       <Navbar />
       <Hero />
+      <section className="border-b border-bronze/10 py-10 sm:py-14">
+        <div className="container mx-auto px-4">
+          <div className="mb-6 flex items-end justify-between">
+            <div>
+              <p className="text-xs tracking-[0.25em] text-bronze/60">SHOPIFY LIVE</p>
+              <h2 className="mt-2 font-serif text-2xl text-bronze sm:text-3xl">
+                Eftalia Seçkisi
+              </h2>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <p className="text-sm text-bronze/60">Ürünler yükleniyor...</p>
+          ) : products.length === 0 ? (
+            <p className="text-sm text-bronze/60">Ürün bulunamadı.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 xl:grid-cols-4">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
       <CategoryGrid />
       <Marquee />
       <CraftShowcase />

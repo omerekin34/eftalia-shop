@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Minus, Plus, ChevronLeft, ChevronRight, Share2, Truck, RefreshCw, Shield, Check } from 'lucide-react'
+import { Heart, Minus, Plus, ChevronLeft, ChevronRight, Share2, Truck, RefreshCw, Shield, Check, Star } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
+import { useCart } from '@/components/storefront/cart-context'
 
 // Product interface
 interface ProductColor {
@@ -32,6 +33,21 @@ interface Product {
   details?: string[]
   materials?: string[]
   dimensions?: { label: string; value: string }[]
+  inStock?: boolean
+}
+
+type QuickInfoItem = {
+  id: string
+  title: string
+  content: string
+}
+
+type ProductReview = {
+  id: string
+  name: string
+  date: string
+  rating: number
+  comment: string
 }
 
 // Mock products data (same as tum-urunler)
@@ -162,19 +178,230 @@ const defaultProduct: Product = {
   ],
 }
 
+type ShopifyProductApiNode = {
+  id: string
+  handle: string
+  title: string
+  description?: string
+  productType?: string
+  tags?: string[]
+  featuredImage?: { url: string } | null
+  images?: { edges?: Array<{ node?: { url?: string | null } }> }
+  variants?: {
+    edges?: Array<{
+      node?: {
+        availableForSale?: boolean
+        quantityAvailable?: number | null
+        price?: { amount?: string }
+        compareAtPrice?: { amount?: string } | null
+        selectedOptions?: Array<{ name: string; value: string }>
+      }
+    }>
+  }
+}
+
+const colorHexMap: Record<string, string> = {
+  krem: '#F5F5DC',
+  siyah: '#1a1a1a',
+  antrasit: '#383838',
+  vizon: '#8B7355',
+  bej: '#D4C4A8',
+  kahve: '#5C4033',
+  pudra: '#E8D5D5',
+  mint: '#98D4BB',
+  taba: '#A67B5B',
+}
+
+function mapShopifyProductToUi(node: ShopifyProductApiNode): Product {
+  const variants = node.variants?.edges?.map((edge) => edge.node).filter(Boolean) || []
+  const prices = variants.map((variant) => Number(variant?.price?.amount || 0)).filter((p) => p > 0)
+  const comparePrices = variants
+    .map((variant) => Number(variant?.compareAtPrice?.amount || 0))
+    .filter((p) => p > 0)
+
+  const minPrice = prices.length ? Math.min(...prices) : defaultProduct.price
+  const minComparePrice = comparePrices.length ? Math.min(...comparePrices) : undefined
+  const discount =
+    minComparePrice && minComparePrice > minPrice
+      ? Math.round(((minComparePrice - minPrice) / minComparePrice) * 100)
+      : undefined
+
+  const inStock = variants.some(
+    (variant) => Boolean(variant?.availableForSale) && ((variant?.quantityAvailable ?? 1) > 0)
+  )
+
+  const images = Array.from(
+    new Set(
+      [node.featuredImage?.url, ...(node.images?.edges || []).map((edge) => edge.node?.url)].filter(
+        Boolean
+      )
+    )
+  ) as string[]
+
+  const colorValues = Array.from(
+    new Set(
+      variants
+        .flatMap((variant) => variant?.selectedOptions || [])
+        .filter((option) =>
+          ['color', 'renk'].includes((option.name || '').toLocaleLowerCase('tr'))
+        )
+        .map((option) => option.value)
+    )
+  )
+
+  const colors: ProductColor[] = colorValues.length
+    ? colorValues.map((name) => ({
+        name,
+        hex: colorHexMap[name.toLocaleLowerCase('tr')] || '#D4C4A8',
+      }))
+    : defaultProduct.colors
+
+  const tags = node.tags || []
+
+  return {
+    id: node.id,
+    name: node.title,
+    slug: node.handle,
+    price: minPrice,
+    originalPrice: minComparePrice,
+    discount,
+    images,
+    category: (node.productType || '').toLocaleLowerCase('tr').includes('cüzdan') ? 'cuzdan-kartlik' : 'canta',
+    subcategory: node.productType || defaultProduct.subcategory,
+    colors,
+    isNew: tags.some((tag) => ['new', 'yeni'].includes((tag || '').toLocaleLowerCase('tr'))),
+    isBestseller: tags.some((tag) =>
+      ['bestseller', 'çok satan', 'cok-satan', 'coksatan'].includes((tag || '').toLocaleLowerCase('tr'))
+    ),
+    description: node.description || defaultProduct.description,
+    details: defaultProduct.details,
+    materials: defaultProduct.materials,
+    dimensions: defaultProduct.dimensions,
+    inStock,
+  }
+}
+
 export default function ProductDetailPage() {
   const params = useParams()
   const slug = params.slug as string
-  
-  // Find product by slug or use default
-  const product = mockProducts.find(p => p.slug === slug) || { ...defaultProduct, name: slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), slug }
-  
-  const [selectedColor, setSelectedColor] = useState(product.colors[0])
+
+  const [shopifyProduct, setShopifyProduct] = useState<Product | null>(null)
+  const [isLoadingProduct, setIsLoadingProduct] = useState(true)
+
+  // Shopify öncelikli, fallback mock/default
+  const fallbackProduct =
+    mockProducts.find((p) => p.slug === slug) || {
+      ...defaultProduct,
+      name: slug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+      slug,
+    }
+  const product = shopifyProduct || fallbackProduct
+
+  const [selectedColor, setSelectedColor] = useState(product.colors[0] || defaultProduct.colors[0])
   const [quantity, setQuantity] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isFavorite, setIsFavorite] = useState(false)
   const [activeTab, setActiveTab] = useState<'details' | 'materials' | 'dimensions'>('details')
   const [isAddedToCart, setIsAddedToCart] = useState(false)
+  const [openQuickInfoId, setOpenQuickInfoId] = useState<string | null>('urun-ozellikleri')
+  const [showAllReviews, setShowAllReviews] = useState(false)
+  const { addItem } = useCart()
+
+  useEffect(() => {
+    const loadProduct = async () => {
+      try {
+        setIsLoadingProduct(true)
+        const response = await fetch(`/api/shopify/product/${slug}`, { cache: 'no-store' })
+        if (!response.ok) {
+          setShopifyProduct(null)
+          return
+        }
+        const data = (await response.json()) as { product?: ShopifyProductApiNode }
+        if (data.product) {
+          setShopifyProduct(mapShopifyProductToUi(data.product))
+        } else {
+          setShopifyProduct(null)
+        }
+      } catch {
+        setShopifyProduct(null)
+      } finally {
+        setIsLoadingProduct(false)
+      }
+    }
+
+    loadProduct()
+  }, [slug])
+
+  useEffect(() => {
+    setSelectedColor(product.colors[0] || defaultProduct.colors[0])
+    setCurrentImageIndex(0)
+  }, [product.id])
+
+  const productReviews: ProductReview[] = [
+    {
+      id: '1',
+      name: 'Ayse K.',
+      date: '12 Nisan 2026',
+      rating: 5,
+      comment: 'Deri kalitesi bekledigimden iyi cikti. Renk tam fotograflardaki gibi ve gunluk kullanimda cok rahat.',
+    },
+    {
+      id: '2',
+      name: 'Merve T.',
+      date: '08 Nisan 2026',
+      rating: 5,
+      comment: 'Paketleme cok ozenliydi. Canta hem sik hem de ic hacmi gayet kullanisli.',
+    },
+    {
+      id: '3',
+      name: 'Seda Y.',
+      date: '02 Nisan 2026',
+      rating: 4,
+      comment: 'Urun guzel, dikişleri temiz. Kargo da hizli geldi. Farkli renklerini de almayi dusunuyorum.',
+    },
+    {
+      id: '4',
+      name: 'Ece B.',
+      date: '27 Mart 2026',
+      rating: 5,
+      comment: 'Tam aradigim boyutta. Kombinlemesi kolay, malzeme hissi premium.',
+    },
+  ]
+
+  const visibleReviews = showAllReviews ? productReviews : productReviews.slice(0, 2)
+
+  const quickInfoItems: QuickInfoItem[] = [
+    {
+      id: 'urun-ozellikleri',
+      title: 'Ürün Özellikleri',
+      content: 'Bu model, günlük kullanım için ideal ölçülerde hazırlanmıştır. İç bölümde düzenleyici cepler ve güvenli fermuarlı alan bulunur.',
+    },
+    {
+      id: 'bakim-rehberi',
+      title: 'Deri Bakım Rehberi',
+      content: 'Ürünün uzun ömürlü kalması için direkt güneşten ve yoğun nemden uzak tutunuz. Yumuşak, kuru bir bez ile düzenli temizleyiniz.',
+    },
+    {
+      id: 'kargo-teslimat',
+      title: 'Kargo ve Teslimat',
+      content: 'Siparişleriniz 1-3 iş günü içinde özenle hazırlanıp kargoya verilir. Teslimat süreci bölgeye göre 1-4 iş günü arasında değişebilir.',
+    },
+    {
+      id: 'iade-degisim',
+      title: 'İade ve Değişim',
+      content: 'Kullanılmamış ürünlerde 14 gün içinde kolay iade veya değişim yapabilirsiniz. Talep için destek ekibimiz süreç boyunca size yardımcı olur.',
+    },
+    {
+      id: 'odeme-guvenligi',
+      title: 'Ödeme Güvencesi',
+      content: 'Ödeme işlemleriniz güvenli altyapı üzerinden gerçekleştirilir. Kart bilgileriniz sistemlerimizde saklanmaz.',
+    },
+    {
+      id: 'eftelia-dokunusu',
+      title: 'Eftelia Dokunuşu',
+      content: 'Her parça, usta ellerde özenle tamamlanır ve kalite kontrol sonrası paketlenir. Zamansız kullanım için dayanıklı malzemeler tercih edilir.',
+    },
+  ]
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('tr-TR', {
@@ -185,6 +412,17 @@ export default function ProductDetailPage() {
   }
 
   const handleAddToCart = () => {
+    addItem(
+      {
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        price: product.price,
+        image: product.images[0],
+        color: selectedColor.name,
+      },
+      quantity
+    )
     setIsAddedToCart(true)
     setTimeout(() => setIsAddedToCart(false), 2000)
   }
@@ -416,10 +654,11 @@ export default function ProductDetailPage() {
               <motion.button
                 onClick={handleAddToCart}
                 whileTap={{ scale: 0.98 }}
+                disabled={isLoadingProduct || product.inStock === false}
                 className={`mt-8 flex w-full items-center justify-center gap-2 py-4 text-sm font-medium uppercase tracking-wider transition-all ${
                   isAddedToCart
                     ? 'bg-green-600 text-white'
-                    : 'bg-bronze text-white hover:bg-bronze-dark'
+                    : 'bg-bronze text-white hover:bg-bronze-dark disabled:cursor-not-allowed disabled:bg-bronze/45'
                 }`}
               >
                 {isAddedToCart ? (
@@ -427,6 +666,10 @@ export default function ProductDetailPage() {
                     <Check className="h-5 w-5" />
                     Sepete Eklendi
                   </>
+                ) : isLoadingProduct ? (
+                  'Yükleniyor...'
+                ) : product.inStock === false ? (
+                  'Tükendi'
                 ) : (
                   'Sepete Ekle'
                 )}
@@ -514,6 +757,91 @@ export default function ProductDetailPage() {
                     )}
                   </motion.div>
                 </AnimatePresence>
+              </div>
+
+              {/* Quick Info Accordion */}
+              <div className="mt-8 border-t border-bronze/10">
+                <div className="border-b border-bronze/10 py-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-bronze-dark">
+                      Yorumlar ({productReviews.length})
+                    </h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    {visibleReviews.map((review) => (
+                      <div key={review.id} className="rounded-md border border-bronze/10 bg-white p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-bronze">{review.name}</p>
+                            <p className="mt-1 text-xs text-bronze/50">{review.date}</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: 5 }).map((_, index) => (
+                              <Star
+                                key={index}
+                                className={`h-4 w-4 ${
+                                  index < review.rating
+                                    ? 'fill-[#c8a27d] text-[#c8a27d]'
+                                    : 'text-bronze/20'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="mt-3 text-sm leading-relaxed text-bronze/70">{review.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {productReviews.length > 2 && (
+                    <button
+                      onClick={() => setShowAllReviews((prev) => !prev)}
+                      className="mt-4 text-sm font-medium text-bronze underline-offset-4 transition-colors hover:text-bronze-dark hover:underline"
+                    >
+                      {showAllReviews ? 'Daha az yorum göster' : 'Tüm yorumları göster'}
+                    </button>
+                  )}
+                </div>
+
+                {quickInfoItems.map((item) => {
+                  const isOpen = openQuickInfoId === item.id
+
+                  return (
+                    <div key={item.id} className="border-b border-bronze/10">
+                      <button
+                        onClick={() => setOpenQuickInfoId(isOpen ? null : item.id)}
+                        className="flex w-full items-center justify-between py-5 text-left"
+                        aria-expanded={isOpen}
+                        aria-controls={`quick-info-${item.id}`}
+                      >
+                        <span className="text-lg font-medium text-bronze-dark">{item.title}</span>
+                        <ChevronRight
+                          className={`h-5 w-5 text-bronze/50 transition-transform ${
+                            isOpen ? 'rotate-90' : ''
+                          }`}
+                        />
+                      </button>
+
+                      <AnimatePresence initial={false}>
+                        {isOpen && (
+                          <motion.div
+                            id={`quick-info-${item.id}`}
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="overflow-hidden"
+                          >
+                            <p className="pb-5 text-sm leading-relaxed text-bronze/70">
+                              {item.content}
+                            </p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
