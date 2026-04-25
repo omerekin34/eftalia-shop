@@ -4,24 +4,34 @@ import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, User, ShoppingBag, Menu, X, LogIn, Heart, Package, Mail, ChevronRight, Minus, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useCart } from '@/components/storefront/cart-context'
 
 const menuCategories = [
   { name: 'TÜM ÜRÜNLER', href: '/tum-urunler' },
   { name: 'YENİ GELENLER', href: '/tum-urunler?filtre=yeni', badge: 'fire' },
   { name: 'ÇOK SATANLAR', href: '/tum-urunler?filtre=cok-satanlar' },
+  { name: 'ÇANTA', href: '/tum-urunler?kategori=canta' },
   { name: 'SÜET ÇANTA', href: '/tum-urunler?kategori=suet-canta' },
   { name: 'OMUZ ÇANTASI', href: '/tum-urunler?kategori=omuz-cantasi' },
   { name: 'ÇAPRAZ ÇANTA', href: '/tum-urunler?kategori=capraz-canta' },
   { name: 'BAGET ÇANTA', href: '/tum-urunler?kategori=baget-canta' },
+  { name: 'EL ÇANTASI', href: '/tum-urunler?kategori=el-cantasi' },
+  { name: 'MAKYAJ ÇANTASI', href: '/tum-urunler?kategori=makyaj-cantasi' },
+  { name: 'LAPTOP ÇANTASI', href: '/tum-urunler?kategori=laptop-cantasi' },
+  { name: 'SPOR ÇANTASI', href: '/tum-urunler?kategori=spor-cantasi' },
   { name: 'CÜZDAN VE KARTLIKLAR', href: '/tum-urunler?kategori=cuzdan-kartlik' },
+  { name: 'TARAK', href: '/tum-urunler?kategori=tarak' },
+  { name: 'AHŞAP TARAK', href: '/tum-urunler?kategori=ahsap-tarak' },
+  { name: 'KEMİK TARAK', href: '/tum-urunler?kategori=kemik-tarak' },
+  { name: 'CEP TARAĞI', href: '/tum-urunler?kategori=cep-taragi' },
+  { name: 'SAÇ FIRÇASI', href: '/tum-urunler?kategori=sac-fircasi' },
 ]
 
 const accountLinks = [
-  { name: 'Hesabım', href: '/hesabim', icon: User },
-  { name: 'Üye Girişi / Üye Ol', href: '/giris', icon: LogIn },
-  { name: 'Favorilerim', href: '/hesabim/favoriler', icon: Heart },
-  { name: 'Siparişlerim', href: '/hesabim/siparisler', icon: Package },
+  { name: 'Hesabım', href: '/account', icon: User },
+  { name: 'Favorilerim', href: '/account?tab=favorites', icon: Heart },
+  { name: 'Siparişlerim', href: '/account?tab=orders', icon: Package },
   { name: 'İletişim', href: '/iletisim', icon: Mail },
 ]
 
@@ -54,6 +64,9 @@ export function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [customerName, setCustomerName] = useState('')
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
   const { items, totalItems, removeItem, updateItemQuantity } = useCart()
   const cartTotalAmount = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
 
@@ -64,6 +77,36 @@ export function Navbar() {
       category.name.toLocaleLowerCase('tr').includes(query)
     )
   }, [searchQuery])
+
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session', { cache: 'no-store' })
+        const data = (await response.json()) as {
+          authenticated?: boolean
+          customer?: { firstName?: string; lastName?: string } | null
+        }
+        const authenticated = Boolean(data?.authenticated)
+        setIsAuthenticated(authenticated)
+        if (authenticated) {
+          const fullName = [data?.customer?.firstName, data?.customer?.lastName]
+            .filter(Boolean)
+            .join(' ')
+            .trim()
+          setCustomerName(fullName)
+        } else {
+          setCustomerName('')
+        }
+      } catch {
+        setIsAuthenticated(false)
+        setCustomerName('')
+      } finally {
+        setIsAuthLoading(false)
+      }
+    }
+
+    loadSession()
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -84,6 +127,28 @@ export function Navbar() {
       document.body.style.overflow = ''
     }
   }, [isMobileMenuOpen, isSearchOpen, isCartOpen])
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    setIsAuthenticated(false)
+    setCustomerName('')
+    setIsMobileMenuOpen(false)
+    window.location.href = '/'
+  }
+
+  const authLink = isAuthenticated
+    ? { href: '/account', label: customerName || 'Hesabım' }
+    : { href: '/giris', label: 'Üye Girişi' }
+
+  const menuAccountLinks = isAuthenticated
+    ? accountLinks
+    : [
+        { name: 'Üye Girişi / Üye Ol', href: '/giris', icon: LogIn },
+        { name: 'Hesabım', href: '/giris', icon: User },
+        { name: 'Favorilerim', href: '/giris', icon: Heart },
+        { name: 'Siparişlerim', href: '/giris', icon: Package },
+        { name: 'İletişim', href: '/iletisim', icon: Mail },
+      ]
 
   return (
     <>
@@ -136,12 +201,25 @@ export function Navbar() {
                 <Search className="h-5 w-5 text-bronze transition-colors group-hover:text-gold" strokeWidth={1.5} />
               </button>
               <Link
-                href="/giris"
-                className="group hidden p-2 transition-colors sm:block"
-                aria-label="Üye girişi"
+                href={authLink.href}
+                className="group hidden items-center gap-2 p-2 transition-colors sm:flex"
+                aria-label={authLink.label}
               >
                 <User className="h-5 w-5 text-bronze transition-colors group-hover:text-gold" strokeWidth={1.5} />
+                {!isAuthLoading ? (
+                  <span className="hidden text-xs font-medium uppercase tracking-[0.08em] text-bronze/75 lg:inline">
+                    {authLink.label}
+                  </span>
+                ) : null}
               </Link>
+              {isAuthenticated ? (
+                <button
+                  onClick={handleLogout}
+                  className="hidden text-[11px] font-medium uppercase tracking-[0.08em] text-bronze/70 transition-colors hover:text-rose lg:block"
+                >
+                  Çıkış
+                </button>
+              ) : null}
               <button
                 onClick={() => setIsCartOpen(true)}
                 className="group relative p-2 transition-colors"
@@ -448,7 +526,7 @@ export function Navbar() {
                   </p>
                 </div>
                 <ul className="space-y-1">
-                  {accountLinks.map((item, i) => (
+                  {menuAccountLinks.map((item, i) => (
                     <motion.li
                       key={item.name}
                       initial={{ opacity: 0, x: -20 }}
@@ -487,6 +565,24 @@ export function Navbar() {
                       )}
                     </motion.li>
                   ))}
+                  {isAuthenticated && (
+                    <motion.li
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.8, duration: 0.3 }}
+                    >
+                      <button
+                        onClick={handleLogout}
+                        className="group flex w-full items-center justify-between rounded-md px-2 py-3 text-[15px] text-rose transition-colors hover:bg-ivory-warm hover:text-rose/80"
+                      >
+                        <span className="flex items-center gap-3">
+                          <LogIn className="h-5 w-5 rotate-180" strokeWidth={1.5} />
+                          <span>Çıkış Yap</span>
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-rose/50 transition-transform group-hover:translate-x-0.5" />
+                      </button>
+                    </motion.li>
+                  )}
                 </ul>
               </div>
 

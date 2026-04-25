@@ -46,6 +46,13 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
   }
 
   const extraColors = product.colors.length > 3 ? product.colors.length - 3 : 0
+  const hasDiscount =
+    typeof product.originalPrice === 'number' &&
+    product.originalPrice > 0 &&
+    product.originalPrice > product.price
+  const discountPercent = hasDiscount
+    ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
+    : 0
 
   return (
     <motion.article
@@ -93,17 +100,17 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
 
         {/* Badges */}
         <div className="absolute left-2 top-2 flex flex-col gap-1 sm:left-3 sm:top-3">
-          {product.discount && (
-            <span className="bg-[#c41e3a] px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs">
-              %{product.discount}
-            </span>
-          )}
-          {product.isNew && (
-            <span className="bg-bronze px-2 py-0.5 text-[10px] font-medium text-white sm:text-xs">
-              YENİ
+          {hasDiscount && (
+            <span className="rounded-md bg-[#7B1E2B] px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white shadow-md sm:text-xs">
+              %{discountPercent} İndirim
             </span>
           )}
         </div>
+        {product.isNew && (
+          <span className="absolute right-12 top-2 rounded-md border border-black/80 bg-black/85 px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-[#E9D5A1] shadow-md sm:right-14 sm:top-3 sm:text-xs">
+            YENİ
+          </span>
+        )}
 
         {/* Wishlist Button */}
         <button
@@ -168,12 +175,12 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
         </Link>
         
         <div className="flex items-baseline gap-2">
-          {product.originalPrice && (
-            <span className="text-xs text-bronze/40 line-through sm:text-sm">
+          {hasDiscount && (
+            <span className="text-xs text-zinc-400 line-through sm:text-sm">
               {formatPrice(product.originalPrice)}
             </span>
           )}
-          <span className={`text-sm font-medium sm:text-base ${product.originalPrice ? 'text-[#c41e3a]' : 'text-bronze'}`}>
+          <span className={`text-sm font-semibold sm:text-base ${hasDiscount ? 'text-[#7B1E2B]' : 'text-bronze'}`}>
             {formatPrice(product.price)}
           </span>
         </div>

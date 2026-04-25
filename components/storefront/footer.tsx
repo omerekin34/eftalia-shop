@@ -8,10 +8,10 @@ import Link from 'next/link'
 const footerLinks = {
   shop: [
     { label: 'Tüm Ürünler', href: '/tum-urunler' },
-    { label: 'El Çantaları', href: '/tum-urunler?kategori=el-cantasi' },
-    { label: 'Makyaj Çantaları', href: '/tum-urunler?kategori=makyaj-cantasi' },
+    { label: 'Çanta', href: '/tum-urunler?kategori=canta' },
     { label: 'Cüzdan ve Kartlıklar', href: '/tum-urunler?kategori=cuzdan-kartlik' },
-    { label: 'Yeni Gelenler', href: '/tum-urunler?yeni=true' },
+    { label: 'Tarak', href: '/tum-urunler?kategori=tarak' },
+    { label: 'Yeni Gelenler', href: '/tum-urunler?filtre=yeni' },
   ],
   about: [
     { label: 'Hikayemiz', href: '/hakkimizda/hikayemiz' },

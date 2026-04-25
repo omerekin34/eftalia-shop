@@ -27,7 +27,7 @@ export default function OdemePage() {
                 Ana Sayfa
               </Link>
               <span>/</span>
-              <Link href="/hesabim/sepetim" className="transition-colors hover:text-bronze">
+              <Link href="/account" className="transition-colors hover:text-bronze">
                 Sepetim
               </Link>
               <span>/</span>

@@ -38,10 +38,8 @@ const categories = {
   'canta': {
     name: 'Çanta',
     subcategories: [
-      'Süet Çanta',
-      'Omuz Çantası',
-      'Çapraz Çanta',
-      'Baget Çanta',
+      '14 Şubat Sevgililer Günü Hediye',
+      'Süet Çantası',
       'El Çantası',
       'Makyaj Çantası',
       'Laptop Çantası',
@@ -51,20 +49,16 @@ const categories = {
   'cuzdan-kartlik': {
     name: 'Cüzdan ve Kartlıklar',
     subcategories: [
-      'Kadın Cüzdan',
-      'Erkek Cüzdan',
+      'Kadın Cüzdanı',
+      'Erkek Cüzdanı',
       'Kartlık',
-      'Pasaportluk',
-      'Telefon Cüzdanı',
     ]
   },
   'tarak': {
     name: 'Tarak',
     subcategories: [
       'Ahşap Tarak',
-      'Kemik Tarak',
-      'Cep Tarağı',
-      'Saç Fırçası',
+      'Saç Tarağı',
     ]
   }
 }
@@ -157,7 +151,7 @@ const safeDecodeURIComponent = (value: string) => {
   const [selectedPriceRange, setSelectedPriceRange] = useState<{ min: number; max: number } | null>(null)
   const [customPriceMin, setCustomPriceMin] = useState('')
   const [customPriceMax, setCustomPriceMax] = useState('')
-  const [activeFilter, setActiveFilter] = useState<'yeni' | 'cok-satanlar' | 'outlet' | null>(null)
+  const [activeFilter, setActiveFilter] = useState<'yeni' | 'cok-satanlar' | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
   const [productsError, setProductsError] = useState<string | null>(null)
@@ -197,37 +191,30 @@ const safeDecodeURIComponent = (value: string) => {
     } else if (filtre === 'cok-satanlar') {
       setActiveFilter('cok-satanlar')
       setSelectedSort('bestseller')
-    } else if (filtre === 'outlet') {
-      setActiveFilter('outlet')
-      setSelectedSort('discount')
     }
 
     // Handle category from URL
     if (kategori) {
       const categoryMap: Record<string, string> = {
-        'suet-canta': 'Süet Çanta',
-        'omuz-cantasi': 'Omuz Çantası',
-        'capraz-canta': 'Çapraz Çanta',
-        'baget-canta': 'Baget Çanta',
+        '14-subat-sevgililer-gunu-hediye': '14 Şubat Sevgililer Günü Hediye',
+        'suet-cantasi': 'Süet Çantası',
         'el-cantasi': 'El Çantası',
         'makyaj-cantasi': 'Makyaj Çantası',
         'laptop-cantasi': 'Laptop Çantası',
         'spor-cantasi': 'Spor Çantası',
-        'kadin-cuzdan': 'Kadın Cüzdan',
-        'erkek-cuzdan': 'Erkek Cüzdan',
+        'kadin-cuzdani': 'Kadın Cüzdanı',
+        'erkek-cuzdani': 'Erkek Cüzdanı',
         'kartlik': 'Kartlık',
-        'pasaportluk': 'Pasaportluk',
-        'telefon-cuzdani': 'Telefon Cüzdanı',
         'ahsap-tarak': 'Ahşap Tarak',
-        'kemik-tarak': 'Kemik Tarak',
-        'cep-taragi': 'Cep Tarağı',
-        'sac-fircasi': 'Saç Fırçası',
+        'sac-taragi': 'Saç Tarağı',
         'cuzdan-kartlik': 'cuzdan-kartlik',
       }
       const decodedKategori = safeDecodeURIComponent(kategori)
       const normalizedKategori = normalizeForSearch(decodedKategori)
 
-      if (normalizedKategori === 'cuzdan-kartlik') {
+      if (['canta', 'cuzdan-kartlik', 'tarak'].includes(normalizedKategori)) {
+        setSelectedCategories([normalizedKategori])
+      } else if (normalizedKategori === 'cuzdan-ve-kartliklar') {
         setSelectedCategories(['cuzdan-kartlik'])
       } else {
         const matchedSubcategory = Object.entries(categoryMap).find(([key, value]) => {
@@ -260,8 +247,6 @@ const safeDecodeURIComponent = (value: string) => {
       productsToFilter = productsToFilter.filter(p => p.isNew === true)
     } else if (activeFilter === 'cok-satanlar') {
       productsToFilter = productsToFilter.filter(p => p.isBestseller === true)
-    } else if (activeFilter === 'outlet') {
-      productsToFilter = productsToFilter.filter(p => p.discount && p.discount >= 50)
     }
 
     // Filter by category
@@ -348,8 +333,7 @@ const safeDecodeURIComponent = (value: string) => {
             <span>/</span>
             <span className="text-bronze">
               {activeFilter === 'yeni' ? 'Yeni Gelenler' : 
-               activeFilter === 'cok-satanlar' ? 'Çok Satanlar' : 
-               activeFilter === 'outlet' ? 'Outlet' : 'Tüm Ürünler'}
+               activeFilter === 'cok-satanlar' ? 'Çok Satanlar' : 'Tüm Ürünler'}
             </span>
           </nav>
         </div>
@@ -368,8 +352,7 @@ const safeDecodeURIComponent = (value: string) => {
           <div>
             <h1 className="font-serif text-2xl text-bronze sm:text-3xl">
               {activeFilter === 'yeni' ? 'Yeni Gelenler' : 
-               activeFilter === 'cok-satanlar' ? 'Çok Satanlar' : 
-               activeFilter === 'outlet' ? 'Outlet' : 'Tüm Ürünler'}
+               activeFilter === 'cok-satanlar' ? 'Çok Satanlar' : 'Tüm Ürünler'}
             </h1>
             <p className="mt-1 text-sm text-bronze/60">{filteredProducts.length} ürün bulundu</p>
           </div>

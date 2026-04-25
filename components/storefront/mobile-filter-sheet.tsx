@@ -38,8 +38,8 @@ interface MobileFilterSheetProps {
   setCustomPriceMin: (val: string) => void
   customPriceMax: string
   setCustomPriceMax: (val: string) => void
-  activeFilter: 'yeni' | 'cok-satanlar' | 'outlet' | null
-  setActiveFilter: (filter: 'yeni' | 'cok-satanlar' | 'outlet' | null) => void
+  activeFilter: 'yeni' | 'cok-satanlar' | null
+  setActiveFilter: (filter: 'yeni' | 'cok-satanlar' | null) => void
   applyCustomPrice: () => void
   clearFilters: () => void
 }
@@ -113,7 +113,7 @@ export function MobileFilterSheet({
     }
   }
 
-  const toggleSpecialFilter = (filter: 'yeni' | 'cok-satanlar' | 'outlet') => {
+  const toggleSpecialFilter = (filter: 'yeni' | 'cok-satanlar') => {
     setActiveFilter(activeFilter === filter ? null : filter)
   }
 
@@ -221,8 +221,8 @@ export function MobileFilterSheet({
                     </div>
                   ))}
                   
-                  {/* Special Categories */}
-                  <div className="space-y-1 border-t border-bronze/10 pt-3">
+                  <div className="mt-3 rounded-lg border border-bronze/10 bg-white/70 p-3">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-bronze/60">Öne Çıkanlar</p>
                     <label className="flex cursor-pointer items-center gap-2 py-2 text-bronze">
                       <input
                         type="checkbox"
@@ -230,7 +230,7 @@ export function MobileFilterSheet({
                         onChange={() => toggleSpecialFilter('yeni')}
                         className="h-4 w-4 rounded-sm border-bronze/30 text-rose focus:ring-rose/50"
                       />
-                      Yeni Gelenler
+                      🔥 Yeni Gelenler
                       <Flame className="h-4 w-4 text-orange-500" />
                     </label>
                     <label className="flex cursor-pointer items-center gap-2 py-2 text-bronze">
@@ -240,17 +240,8 @@ export function MobileFilterSheet({
                         onChange={() => toggleSpecialFilter('cok-satanlar')}
                         className="h-4 w-4 rounded-sm border-bronze/30 text-rose focus:ring-rose/50"
                       />
-                      Çok Satanlar
+                      🔥 Çok Satanlar
                       <Flame className="h-4 w-4 text-orange-500" />
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2 py-2 text-rose">
-                      <input
-                        type="checkbox"
-                        checked={activeFilter === 'outlet'}
-                        onChange={() => toggleSpecialFilter('outlet')}
-                        className="h-4 w-4 rounded-sm border-bronze/30 text-rose focus:ring-rose/50"
-                      />
-                      OUTLET
                     </label>
                   </div>
                 </div>
@@ -399,7 +390,7 @@ export function MobileFilterSheet({
 
               {/* Account Links */}
               <div className="space-y-3 pb-8">
-                <a href="/hesabim" className="flex items-center gap-3 py-2 text-bronze">
+                <a href="/account" className="flex items-center gap-3 py-2 text-bronze">
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>

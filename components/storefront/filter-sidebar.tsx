@@ -36,8 +36,8 @@ interface FilterSidebarProps {
   setCustomPriceMin: (val: string) => void
   customPriceMax: string
   setCustomPriceMax: (val: string) => void
-  activeFilter: 'yeni' | 'cok-satanlar' | 'outlet' | null
-  setActiveFilter: (filter: 'yeni' | 'cok-satanlar' | 'outlet' | null) => void
+  activeFilter: 'yeni' | 'cok-satanlar' | null
+  setActiveFilter: (filter: 'yeni' | 'cok-satanlar' | null) => void
   applyCustomPrice: () => void
 }
 
@@ -108,7 +108,7 @@ export function FilterSidebar({
     }
   }
 
-  const toggleSpecialFilter = (filter: 'yeni' | 'cok-satanlar' | 'outlet') => {
+  const toggleSpecialFilter = (filter: 'yeni' | 'cok-satanlar') => {
     setActiveFilter(activeFilter === filter ? null : filter)
   }
 
@@ -172,8 +172,8 @@ export function FilterSidebar({
             </div>
           ))}
           
-          {/* Special Categories */}
-          <div className="space-y-2 pt-2">
+          <div className="mt-4 rounded-lg border border-bronze/10 bg-white/70 p-3">
+            <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-bronze/60">Öne Çıkanlar</p>
             <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-bronze transition-colors hover:text-bronze-dark">
               <input
                 type="checkbox"
@@ -181,7 +181,7 @@ export function FilterSidebar({
                 onChange={() => toggleSpecialFilter('yeni')}
                 className="h-4 w-4 rounded-sm border-bronze/30 text-rose focus:ring-rose/50"
               />
-              Yeni Gelenler
+              🔥 Yeni Gelenler
               <Flame className="h-4 w-4 text-orange-500" />
             </label>
             <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-bronze transition-colors hover:text-bronze-dark">
@@ -191,7 +191,7 @@ export function FilterSidebar({
                 onChange={() => toggleSpecialFilter('cok-satanlar')}
                 className="h-4 w-4 rounded-sm border-bronze/30 text-rose focus:ring-rose/50"
               />
-              Çok Satanlar
+              🔥 Çok Satanlar
               <Flame className="h-4 w-4 text-orange-500" />
             </label>
           </div>
