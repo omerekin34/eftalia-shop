@@ -2,9 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Gift, Heart, MapPin, Package, Star, User, UserCog } from 'lucide-react'
+import Image from 'next/image'
+import { Heart, MapPin, Package, Star, User, UserCog } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AccountSidebar, type AccountNavTabKey } from '@/components/storefront/account-sidebar'
+import { TurkiyeIlIlceFields } from '@/components/storefront/turkiye-il-ilce-fields'
+import { AccountOrdersSection, type AccountOrder } from '@/components/storefront/account-orders-section'
+import { useFavorites } from '@/components/storefront/favorites-context'
 
 type CustomerAddress = {
   id: string
@@ -25,18 +29,6 @@ type CustomerDetails = {
   email?: string
   phone?: string
   addresses?: CustomerAddress[]
-}
-
-type CustomerOrder = {
-  id: string
-  orderNumber: number
-  processedAt?: string
-  financialStatus?: string
-  fulfillmentStatus?: string
-  totalPrice?: {
-    amount?: string
-    currencyCode?: string
-  }
 }
 
 type TabKey = AccountNavTabKey
@@ -67,12 +59,6 @@ const dashboardCards: Array<{
     icon: MapPin,
   },
   {
-    key: 'coupons',
-    title: 'Kuponlarım',
-    description: 'Hesabınıza tanımlı indirim kuponlarını buradan takip edin.',
-    icon: Gift,
-  },
-  {
     key: 'reviews',
     title: 'Değerlendirmelerim',
     description: 'Ürünlerimize bıraktığınız yorumları premium listede inceleyin.',
@@ -87,29 +73,10 @@ const dashboardCards: Array<{
   },
 ]
 
-function formatMoney(amount?: string, currency = 'TRY') {
-  const numeric = Number(amount || 0)
-  return new Intl.NumberFormat('tr-TR', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(numeric)
-}
-
-function formatOrderDate(date?: string) {
-  if (!date) return '-'
-  return new Intl.DateTimeFormat('tr-TR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(date))
-}
-
 function getTabFromParam(value: string | null): TabKey {
   if (value === 'orders') return 'orders'
   if (value === 'favorites') return 'favorites'
   if (value === 'addresses') return 'addresses'
-  if (value === 'coupons') return 'coupons'
   if (value === 'profile') return 'profile'
   return 'dashboard'
 }
@@ -119,10 +86,11 @@ export function AccountDashboardClient({
   orders,
 }: {
   customer: CustomerDetails
-  orders: CustomerOrder[]
+  orders: AccountOrder[]
 }) {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { favorites, removeFavorite } = useFavorites()
 
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard')
   const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -296,7 +264,7 @@ export function AccountDashboardClient({
         <div className="rounded-2xl border border-[#9b7a57]/25 bg-[#fffaf2] p-6">
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              <h2 className="font-serif text-2xl text-[#4d3523]">Panel</h2>
+              <h2 className="font-serif text-2xl text-[#4d3523]">Hesabım</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 {dashboardCards.map((card) => {
                   const className =
@@ -332,29 +300,7 @@ export function AccountDashboardClient({
 
           {activeTab === 'orders' && (
             <div>
-              <h2 className="font-serif text-2xl text-[#4d3523]">Siparişlerim</h2>
-              <div className="mt-5 space-y-3">
-                {orders.length > 0 ? (
-                  orders.map((order) => (
-                    <div key={order.id} className="rounded-xl border border-[#9b7a57]/20 bg-white/75 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-[#4d3523]">Sipariş #{order.orderNumber}</p>
-                        <span className="rounded-full border border-[#9b7a57]/25 px-2.5 py-1 text-xs text-[#6d4f35]">
-                          {order.fulfillmentStatus || order.financialStatus || 'Hazırlanıyor'}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm text-[#7d5f45]">{formatOrderDate(order.processedAt)}</p>
-                      <p className="mt-1 text-sm font-medium text-[#4d3523]">
-                        {formatMoney(order?.totalPrice?.amount, order?.totalPrice?.currencyCode)}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-[#9b7a57]/25 bg-white/60 p-5 text-sm text-[#7d5f45]">
-                    Henüz bir siparişiniz bulunmamaktadır.
-                  </div>
-                )}
-              </div>
+              <AccountOrdersSection orders={orders} />
             </div>
           )}
 
@@ -435,17 +381,28 @@ export function AccountDashboardClient({
                   className="rounded-lg border border-[#9b7a57]/30 bg-white px-3 py-2.5 text-sm text-[#4d3523] outline-none focus:border-[#6d4f35] sm:col-span-2"
                   placeholder="Adres"
                 />
-                <input
-                  value={addressForm.city}
-                  onChange={(e) => setAddressForm((prev) => ({ ...prev, city: e.target.value }))}
-                  className="rounded-lg border border-[#9b7a57]/30 bg-white px-3 py-2.5 text-sm text-[#4d3523] outline-none focus:border-[#6d4f35]"
-                  placeholder="İl"
-                />
-                <input
-                  value={addressForm.province}
-                  onChange={(e) => setAddressForm((prev) => ({ ...prev, province: e.target.value }))}
-                  className="rounded-lg border border-[#9b7a57]/30 bg-white px-3 py-2.5 text-sm text-[#4d3523] outline-none focus:border-[#6d4f35]"
-                  placeholder="İlçe"
+                <TurkiyeIlIlceFields
+                  ilValue={addressForm.city}
+                  ilceValue={addressForm.province}
+                  mahalleValue={addressForm.address2}
+                  onIlChange={(il) =>
+                    setAddressForm((prev) => ({
+                      ...prev,
+                      city: il,
+                      province: '',
+                      address2: '',
+                    }))
+                  }
+                  onIlceChange={(ilce) =>
+                    setAddressForm((prev) => ({
+                      ...prev,
+                      province: ilce,
+                      address2: '',
+                    }))
+                  }
+                  onMahalleChange={(mahalle) =>
+                    setAddressForm((prev) => ({ ...prev, address2: mahalle }))
+                  }
                 />
                 {addressError ? (
                   <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 sm:col-span-2">
@@ -514,19 +471,41 @@ export function AccountDashboardClient({
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-xl border border-dashed border-[#9b7a57]/25 bg-white/60 p-5 text-sm text-[#7d5f45]">
-                    Henüz kayıtlı bir adresiniz bulunmuyor.
+                  <div className="rounded-2xl border border-dashed border-[#9b7a57]/30 bg-gradient-to-br from-white to-[#f8efe1] p-6 text-[#7d5f45]">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-[#8a6b4b]">İlk Adresini Kaydet</p>
+                        <p className="mt-2 text-lg font-semibold text-[#4d3523]">Henüz kayıtlı bir adresiniz bulunmuyor.</p>
+                        <p className="mt-1 text-sm leading-relaxed text-[#7d5f45]">
+                          Hızlı ödeme ve kolay sipariş takibi için adres defterinize bir adres ekleyin.
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#9b7a57]/25 bg-white/80 px-4 py-3 text-center">
+                        <p className="text-2xl font-serif text-[#5B1F2A]">0</p>
+                        <p className="text-xs uppercase tracking-[0.12em] text-[#8a6b4b]">Adres</p>
+                      </div>
+                    </div>
+                    <div className="mt-5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          resetAddressForm()
+                          const firstName = profileForm.firstName.trim()
+                          const lastName = profileForm.lastName.trim()
+                          setAddressForm((prev) => ({
+                            ...prev,
+                            firstName: prev.firstName || firstName,
+                            lastName: prev.lastName || lastName,
+                            phone: prev.phone || profileForm.phone,
+                          }))
+                        }}
+                        className="rounded-lg bg-[#5B1F2A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#4a1822]"
+                      >
+                        İlk Adresi Ekle
+                      </button>
+                    </div>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'coupons' && (
-            <div>
-              <h2 className="font-serif text-2xl text-[#4d3523]">Kuponlarım</h2>
-              <div className="mt-5 rounded-xl border border-dashed border-[#9b7a57]/25 bg-white/60 p-5 text-sm text-[#7d5f45]">
-                Bu alanda hesabınıza tanımlı indirim kuponları görünecektir.
               </div>
             </div>
           )}
@@ -534,9 +513,95 @@ export function AccountDashboardClient({
           {activeTab === 'favorites' && (
             <div>
               <h2 className="font-serif text-2xl text-[#4d3523]">Favorilerim</h2>
-              <div className="mt-5 rounded-xl border border-dashed border-[#9b7a57]/25 bg-white/60 p-5 text-sm text-[#7d5f45]">
-                Favori listeniz henüz boş.
-              </div>
+              {favorites.length ? (
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  {favorites.map((item) => (
+                    <div
+                      key={item.id}
+                      className="overflow-hidden rounded-2xl border border-[#9b7a57]/20 bg-white/80 shadow-[0_12px_28px_-22px_rgba(83,58,39,0.55)]"
+                    >
+                      <Link href={`/product/${item.slug}`} className="block">
+                        <div className="relative aspect-[4/3] bg-[#f8efe2]">
+                          {item.images[0] ? (
+                            <Image
+                              src={item.images[0]}
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 100vw, 50vw"
+                            />
+                          ) : null}
+                        </div>
+                      </Link>
+                      <div className="space-y-3 p-4">
+                        <Link href={`/product/${item.slug}`} className="block">
+                          <p className="line-clamp-2 text-sm font-medium text-[#4d3523]">{item.name}</p>
+                        </Link>
+                        <div className="flex items-center gap-2">
+                          {typeof item.originalPrice === 'number' && item.originalPrice > item.price ? (
+                            <span className="text-xs text-[#8f7b66] line-through">
+                              {new Intl.NumberFormat('tr-TR', {
+                                style: 'currency',
+                                currency: 'TRY',
+                                minimumFractionDigits: 2,
+                              }).format(item.originalPrice)}
+                            </span>
+                          ) : null}
+                          <span className="text-base font-semibold text-[#5B1F2A]">
+                            {new Intl.NumberFormat('tr-TR', {
+                              style: 'currency',
+                              currency: 'TRY',
+                              minimumFractionDigits: 2,
+                            }).format(item.price)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className={`text-xs ${item.inStock === false ? 'text-rose-700' : 'text-[#7d5f45]'}`}>
+                            {item.inStock === false ? 'Stokta yok' : 'Stokta'}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => removeFavorite(item.id)}
+                            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-100"
+                          >
+                            Favoriden Çıkar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-5 rounded-2xl border border-dashed border-[#9b7a57]/30 bg-gradient-to-br from-white to-[#f8efe1] p-6 text-[#7d5f45]">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#8a6b4b]">Favori Listenizi Oluşturun</p>
+                      <p className="mt-2 text-lg font-semibold text-[#4d3523]">Favori listeniz henüz boş.</p>
+                      <p className="mt-1 text-sm leading-relaxed text-[#7d5f45]">
+                        Beğendiğiniz ürünleri kalp ikonuna ekleyin, sonra tek ekrandan kolayca karşılaştırın.
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-[#9b7a57]/25 bg-white/80 px-4 py-3 text-center">
+                      <p className="text-2xl font-serif text-[#5B1F2A]">0</p>
+                      <p className="text-xs uppercase tracking-[0.12em] text-[#8a6b4b]">Favori</p>
+                    </div>
+                  </div>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <Link
+                      href="/tum-urunler"
+                      className="rounded-lg bg-[#5B1F2A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#4a1822]"
+                    >
+                      Ürünleri Keşfet
+                    </Link>
+                    <Link
+                      href="/tum-urunler?sort=best"
+                      className="rounded-lg border border-[#9b7a57]/30 bg-white px-4 py-2.5 text-sm font-medium text-[#6d4f35] transition-colors hover:bg-[#f7f0e6]"
+                    >
+                      Popüler Ürünleri Gör
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -3,6 +3,7 @@ import { Playfair_Display, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { CartProvider } from '@/components/storefront/cart-context'
+import { FavoritesProvider } from '@/components/storefront/favorites-context'
 
 const playfair = Playfair_Display({ 
   subsets: ["latin"],
@@ -60,7 +61,9 @@ export default function RootLayout({
   return (
     <html lang="tr" className={`${playfair.variable} ${inter.variable} bg-background`}>
       <body className="font-sans antialiased">
-        <CartProvider>{children}</CartProvider>
+        <FavoritesProvider>
+          <CartProvider>{children}</CartProvider>
+        </FavoritesProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

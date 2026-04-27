@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { Check, Minus, Plus, ShieldCheck, Sparkles, Star, Truck, X } from 'lucide-react'
+import { Check, Minus, Plus, RefreshCcw, ShieldCheck, Sparkles, Star, Truck, X } from 'lucide-react'
 import { useCart } from '@/components/storefront/cart-context'
 
 type ProductVariant = {
@@ -31,6 +31,13 @@ type ProductDetailData = {
   inStock: boolean
   reviewRating?: number
   reviewRatingCount?: number
+  videoUrl?: string
+}
+
+type ProductSpec = {
+  key: string
+  label: string
+  value: string
 }
 
 const colorHexMap: Record<string, string> = {
@@ -42,7 +49,6 @@ const colorHexMap: Record<string, string> = {
   grey: '#808080',
   gray: '#808080',
   cream: '#F5F5DC',
-  mint: '#98D4BB',
   pink: '#E8D5D5',
   siyah: '#1a1a1a',
   bej: '#D4C4A8',
@@ -60,8 +66,33 @@ function formatPrice(price: number) {
   }).format(price)
 }
 
-export function ProductDetailClient({ product }: { product: ProductDetailData }) {
-  const { addItem } = useCart()
+function getEmbeddableVideoUrl(videoUrl?: string) {
+  const raw = String(videoUrl || "").trim()
+  if (!raw) return ""
+  if (raw.includes("youtube.com/watch")) {
+    const url = new URL(raw)
+    const id = url.searchParams.get("v")
+    return id ? `https://www.youtube.com/embed/${id}` : raw
+  }
+  if (raw.includes("youtu.be/")) {
+    const id = raw.split("youtu.be/")[1]?.split("?")[0]
+    return id ? `https://www.youtube.com/embed/${id}` : raw
+  }
+  if (raw.includes("vimeo.com/")) {
+    const id = raw.split("vimeo.com/")[1]?.split("?")[0]
+    return id ? `https://player.vimeo.com/video/${id}` : raw
+  }
+  return raw
+}
+
+export function ProductDetailClient({
+  product,
+  productSpecs = [],
+}: {
+  product: ProductDetailData
+  productSpecs?: ProductSpec[]
+}) {
+  const { addItem, isDrawerOpen } = useCart()
   const [quantity, setQuantity] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isAdded, setIsAdded] = useState(false)
@@ -172,6 +203,8 @@ export function ProductDetailClient({ product }: { product: ProductDetailData })
   }, [])
 
   const hasReviews = Number(product.reviewRating || 0) > 0 && Number(product.reviewRatingCount || 0) > 0
+  const embeddableVideoUrl = getEmbeddableVideoUrl(product.videoUrl)
+  const isExternalEmbed = embeddableVideoUrl.includes("youtube.com/embed") || embeddableVideoUrl.includes("player.vimeo.com/video")
 
   const handleReviewSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -220,7 +253,11 @@ export function ProductDetailClient({ product }: { product: ProductDetailData })
   }, [toastMessage])
 
   return (
-    <div className="grid gap-10 lg:grid-cols-2 lg:gap-20">
+    <div
+      className={`relative grid gap-10 lg:grid-cols-2 lg:gap-20 ${
+        isDrawerOpen ? 'pb-0' : 'pb-28'
+      }`}
+    >
       <div className="space-y-5">
         <div
           className="group relative aspect-[4/5] overflow-hidden rounded-2xl border border-bronze/10 bg-ivory-warm shadow-[0_24px_90px_-44px_rgba(66,46,35,0.5)]"
@@ -272,6 +309,25 @@ export function ProductDetailClient({ product }: { product: ProductDetailData })
             ))}
           </div>
         )}
+
+        {productSpecs.length > 0 ? (
+          <section className="rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5">
+            <p className="mb-3 text-xs uppercase tracking-[0.2em] text-bronze/70">Ürün Özellikleri</p>
+            <div className="divide-y divide-bronze/10">
+              {productSpecs.map((field) => (
+                <details key={field.key} className="group py-2">
+                  <summary className="cursor-pointer list-none py-3 text-sm font-medium text-bronze-dark">
+                    <span className="inline-flex w-full items-center justify-between">
+                      <span>{field.label}</span>
+                      <span className="text-bronze/50 transition-transform group-open:rotate-180">⌄</span>
+                    </span>
+                  </summary>
+                  <p className="pb-3 pr-8 text-sm leading-relaxed text-bronze/75">{field.value}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
 
       <div className="flex flex-col pt-1">
@@ -364,42 +420,61 @@ export function ProductDetailClient({ product }: { product: ProductDetailData })
           </div>
         </div>
 
-        <motion.button
-          whileTap={{ scale: 0.98 }}
-          onClick={handleAddToCart}
-          disabled={!inStock}
-          className={`mt-9 flex w-full items-center justify-center gap-2 rounded-xl py-5 text-base font-semibold uppercase tracking-[0.14em] transition-colors ${
-            inStock
-              ? 'bg-bronze text-white shadow-[0_12px_30px_-12px_rgba(66,46,35,0.65)] hover:bg-bronze-dark'
-              : 'cursor-not-allowed bg-bronze/35 text-white/75'
-          }`}
-        >
-          {isAdded ? (
-            <>
-              <Check className="h-5 w-5" />
-              Sepete Eklendi
-            </>
-          ) : inStock ? (
-            'Sepete Ekle'
-          ) : (
-            'Tükendi'
-          )}
-        </motion.button>
+        {selectedVariant && inStock && selectedVariant.quantityAvailable > 0 && selectedVariant.quantityAvailable <= 3 ? (
+          <div className="mt-4 rounded-xl border border-[#7B1E2B]/30 bg-gradient-to-r from-[#fff1f3] to-[#ffe7eb] px-4 py-3 shadow-[0_10px_22px_-16px_rgba(123,30,43,0.65)]">
+            <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[#7B1E2B]">
+              Son {selectedVariant.quantityAvailable} ürün kaldı
+            </p>
+            <p className="mt-1 text-xs text-[#8b3a48]">
+              Yoğun talep var, tükenmeden sepete eklemenizi öneririz.
+            </p>
+          </div>
+        ) : null}
+        {!inStock ? (
+          <div className="mt-4 rounded-xl border border-[#c41e3a]/25 bg-[#fff0f2] px-4 py-3">
+            <p className="text-sm font-semibold text-[#c41e3a]">Bu varyant stokta bulunmuyor.</p>
+            <p className="mt-1 text-xs text-[#b14b5d]">Farklı renk seçerek tekrar deneyebilirsiniz.</p>
+          </div>
+        ) : null}
 
-        <div className="mt-5 grid gap-2 rounded-xl border border-bronze/10 bg-[#fffdf9] p-4 sm:grid-cols-3">
-          <div className="flex items-center gap-2 text-xs text-bronze/80">
-            <Truck className="h-4 w-4 text-bronze" />
-            <span>Ücretsiz Kargo</span>
+        <section className="mt-5 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fff9ef] p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-bronze/70">Güvenli Alışveriş Ayrıcalıkları</p>
+            <span className="rounded-full border border-bronze/20 bg-white/75 px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-bronze/70">
+              Eftalia Güvencesi
+            </span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-bronze/80">
-            <Sparkles className="h-4 w-4 text-bronze" />
-            <span>%100 El İşçiliği</span>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="flex items-start gap-2 rounded-lg border border-bronze/10 bg-white/80 p-3 text-xs text-bronze/80">
+              <Truck className="mt-0.5 h-4 w-4 text-bronze" />
+              <div>
+                <p className="font-semibold text-bronze-dark">Ücretsiz Kargo</p>
+                <p className="mt-0.5 text-[11px] text-bronze/65">Belirli tutar üzeri siparişlerde hızlı ve ücretsiz teslimat.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg border border-bronze/10 bg-white/80 p-3 text-xs text-bronze/80">
+              <RefreshCcw className="mt-0.5 h-4 w-4 text-bronze" />
+              <div>
+                <p className="font-semibold text-bronze-dark">Kolay İade Süreci</p>
+                <p className="mt-0.5 text-[11px] text-bronze/65">Uygun ürünlerde pratik iade ve değişim desteği.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg border border-bronze/10 bg-white/80 p-3 text-xs text-bronze/80">
+              <Sparkles className="mt-0.5 h-4 w-4 text-bronze" />
+              <div>
+                <p className="font-semibold text-bronze-dark">%100 El İşçiliği</p>
+                <p className="mt-0.5 text-[11px] text-bronze/65">Her üründe premium malzeme ve özenli üretim standardı.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg border border-bronze/10 bg-white/80 p-3 text-xs text-bronze/80">
+              <ShieldCheck className="mt-0.5 h-4 w-4 text-bronze" />
+              <div>
+                <p className="font-semibold text-bronze-dark">Güvenli Ödeme</p>
+                <p className="mt-0.5 text-[11px] text-bronze/65">SSL korumalı altyapı ile güvenli ödeme deneyimi.</p>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-bronze/80">
-            <ShieldCheck className="h-4 w-4 text-bronze" />
-            <span>Güvenli Ödeme</span>
-          </div>
-        </div>
+        </section>
         <section className="mt-8 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -429,7 +504,82 @@ export function ProductDetailClient({ product }: { product: ProductDetailData })
               : 'Bu ürün için henüz yorum yapılmadı. İlk yorumu sen yap!'}
           </div>
         </section>
+
+        {embeddableVideoUrl ? (
+          <section className="mt-8 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-bronze/70">Ürün Tanıtım Videosu</p>
+            <div className="mt-4 overflow-hidden rounded-xl border border-bronze/15 bg-black/90 shadow-[0_18px_34px_-26px_rgba(28,20,15,0.75)]">
+              {isExternalEmbed ? (
+                <iframe
+                  src={embeddableVideoUrl}
+                  title={`${product.name} tanıtım videosu`}
+                  className="aspect-video w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              ) : (
+                <video
+                  className="aspect-video w-full"
+                  src={embeddableVideoUrl}
+                  controls
+                  preload="metadata"
+                >
+                  Tarayıcınız video etiketini desteklemiyor.
+                </video>
+              )}
+            </div>
+          </section>
+        ) : null}
       </div>
+
+      {!isDrawerOpen ? (
+        <div
+          className="fixed inset-x-0 bottom-0 z-[90] border-t border-bronze/20 bg-[#fdf8f0]/98 shadow-[0_-14px_44px_-16px_rgba(66,46,35,0.42)] backdrop-blur-md ring-1 ring-black/[0.04]"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+          role="region"
+          aria-label="Sepete ekle çubuğu"
+        >
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pt-3 pb-1 sm:gap-4 sm:px-6 sm:pt-3.5 lg:gap-6 lg:px-8 lg:pt-4">
+            <div className="min-w-0 flex-1">
+              {hasDiscount && typeof displayCompare === 'number' ? (
+                <p className="text-xs text-zinc-400 line-through sm:text-sm">{formatPrice(displayCompare)}</p>
+              ) : null}
+              <p className="truncate text-lg font-bold text-bronze-dark sm:text-xl lg:text-2xl">
+                {formatPrice(displayPrice)}
+              </p>
+              {quantity > 1 ? (
+                <p className="truncate text-[11px] text-bronze/60 sm:text-xs">
+                  {quantity} adet sepete eklenecek
+                </p>
+              ) : selectedColor ? (
+                <p className="truncate text-[11px] text-bronze/60 sm:text-xs">{selectedColor}</p>
+              ) : null}
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              type="button"
+              onClick={handleAddToCart}
+              disabled={!inStock}
+              className={`shrink-0 rounded-xl px-5 py-3.5 text-xs font-semibold uppercase tracking-[0.12em] transition-colors sm:px-6 sm:py-4 sm:text-sm lg:px-8 lg:py-4 lg:tracking-[0.14em] ${
+                inStock
+                  ? 'bg-bronze text-white shadow-[0_10px_26px_-14px_rgba(66,46,35,0.7)] hover:bg-bronze-dark'
+                  : 'cursor-not-allowed bg-bronze/35 text-white/75'
+              }`}
+            >
+              {isAdded ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Eklendi
+                </span>
+              ) : inStock ? (
+                'Sepete Ekle'
+              ) : (
+                'Tükendi'
+              )}
+            </motion.button>
+          </div>
+        </div>
+      ) : null}
 
       {isReviewModalOpen ? (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 px-4">

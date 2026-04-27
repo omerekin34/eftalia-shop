@@ -22,6 +22,7 @@ interface PriceRange {
 
 interface FilterSidebarProps {
   categories: Record<string, Category>
+  featuredCollectionFilters: string[]
   colorOptions: ColorOption[]
   priceRanges: PriceRange[]
   selectedCategories: string[]
@@ -43,6 +44,7 @@ interface FilterSidebarProps {
 
 export function FilterSidebar({
   categories,
+  featuredCollectionFilters,
   colorOptions,
   priceRanges,
   selectedCategories,
@@ -174,6 +176,20 @@ export function FilterSidebar({
           
           <div className="mt-4 rounded-lg border border-bronze/10 bg-white/70 p-3">
             <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-bronze/60">Öne Çıkanlar</p>
+            {featuredCollectionFilters.map((special) => (
+              <label
+                key={special}
+                className="flex cursor-pointer items-center gap-2 py-1 text-sm text-bronze transition-colors hover:text-bronze-dark"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedSubcategories.includes(special)}
+                  onChange={() => handleSubcategoryChange(special)}
+                  className="h-4 w-4 rounded-sm border-bronze/30 text-rose focus:ring-rose/50"
+                />
+                {special}
+              </label>
+            ))}
             <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-bronze transition-colors hover:text-bronze-dark">
               <input
                 type="checkbox"

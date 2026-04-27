@@ -9,6 +9,7 @@ import { CraftShowcase } from '@/components/storefront/craft-showcase'
 import { Marquee } from '@/components/storefront/marquee'
 import { Footer } from '@/components/storefront/footer'
 import { ProductCard } from '@/components/storefront/product-card'
+import { UgcVideoShowcase } from '@/components/storefront/ugc-video-showcase'
 import { getProducts } from '@/lib/shopify/getProducts'
 
 interface HomeProduct {
@@ -27,8 +28,19 @@ interface HomeProduct {
   inStock?: boolean
 }
 
+interface UgcVideo {
+  id: string
+  title: string
+  subtitle?: string
+  videoUrl: string
+  thumbnailUrl?: string
+  productHandle?: string
+  ctaText?: string
+}
+
 export default function Home() {
   const [products, setProducts] = useState<HomeProduct[]>([])
+  const [ugcVideos, setUgcVideos] = useState<UgcVideo[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -55,6 +67,20 @@ export default function Home() {
       }
     }
     loadProducts()
+  }, [])
+
+  useEffect(() => {
+    const loadUgcVideos = async () => {
+      try {
+        const response = await fetch('/api/storefront/ugc-videos', { cache: 'no-store' })
+        if (!response.ok) return
+        const data = (await response.json()) as { videos?: UgcVideo[] }
+        setUgcVideos(Array.isArray(data.videos) ? data.videos : [])
+      } catch {
+        setUgcVideos([])
+      }
+    }
+    loadUgcVideos()
   }, [])
 
   return (
@@ -94,6 +120,7 @@ export default function Home() {
       <Marquee />
       <CraftShowcase />
       <Marquee />
+      <UgcVideoShowcase items={ugcVideos} />
       <Footer />
     </motion.main>
   )

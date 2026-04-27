@@ -1,4 +1,5 @@
 import {
+  COLLECTIONS_QUERY,
   CART_CREATE_MUTATION,
   CART_LINES_ADD_MUTATION,
   CART_LINES_REMOVE_MUTATION,
@@ -8,6 +9,27 @@ import {
   PRODUCTS_QUERY,
 } from '@/lib/shopify/queries'
 import { storefrontFetch } from '@/lib/shopify/client'
+
+export async function getCollections(first = 50) {
+  type Response = {
+    collections: {
+      edges: Array<{
+        node: {
+          id: string
+          title: string
+          handle: string
+        }
+      }>
+    }
+  }
+
+  const data = await storefrontFetch<Response>({
+    query: COLLECTIONS_QUERY,
+    variables: { first },
+  })
+
+  return data.collections.edges.map((edge) => edge.node)
+}
 
 export async function getProducts(first = 24, query?: string) {
   type Response = {
@@ -79,16 +101,71 @@ export async function getProductByHandle(handle: string) {
   return data.product
 }
 
-export async function createCart(lines?: Array<{ merchandiseId: string; quantity: number }>) {
+export type CartCreateBuyerIdentityInput = {
+  customerAccessToken?: string
+  email?: string
+  phone?: string
+  countryCode?: string
+}
+
+export type CartSelectableAddressForCreate = {
+  address:
+    | { copyFromCustomerAddressId: string }
+    | {
+        deliveryAddress: {
+          firstName?: string
+          lastName?: string
+          address1?: string
+          address2?: string
+          city?: string
+          provinceCode?: string
+          countryCode?: string
+          zip?: string
+          phone?: string
+        }
+      }
+  selected?: boolean
+}
+
+export type CreateCartOptions = {
+  buyerCountryCode?: string
+  buyerIdentity?: CartCreateBuyerIdentityInput
+  delivery?: { addresses: CartSelectableAddressForCreate[] }
+}
+
+export async function createCart(
+  lines?: Array<{ merchandiseId: string; quantity: number }>,
+  options?: CreateCartOptions
+) {
   type Response = {
     cartCreate: {
       cart: unknown | null
       userErrors: Array<{ message: string }>
     }
   }
+  const input: Record<string, unknown> = {}
+  if (lines?.length) {
+    input.lines = lines
+  }
+
+  const buyerIdentity: Record<string, unknown> = {}
+  if (options?.buyerIdentity) {
+    Object.assign(buyerIdentity, options.buyerIdentity)
+  }
+  if (options?.buyerCountryCode && !buyerIdentity.countryCode) {
+    buyerIdentity.countryCode = options.buyerCountryCode
+  }
+  if (Object.keys(buyerIdentity).length) {
+    input.buyerIdentity = buyerIdentity
+  }
+
+  if (options?.delivery?.addresses?.length) {
+    input.delivery = { addresses: options.delivery.addresses }
+  }
+
   const data = await storefrontFetch<Response>({
     query: CART_CREATE_MUTATION,
-    variables: { input: lines?.length ? { lines } : {} },
+    variables: { input: Object.keys(input).length ? input : {} },
   })
   if (data.cartCreate.userErrors.length) {
     throw new Error(data.cartCreate.userErrors.map((e) => e.message).join(', '))

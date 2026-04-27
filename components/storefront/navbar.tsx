@@ -7,10 +7,26 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useCart } from '@/components/storefront/cart-context'
 
-const menuCategories = [
+type MenuCategory = {
+  name: string
+  href: string
+  badge?: 'fire'
+  isOutlet?: boolean
+}
+
+type SearchProduct = {
+  id: string
+  name: string
+  slug: string
+}
+
+const fixedMenuCategories: MenuCategory[] = [
   { name: 'TÜM ÜRÜNLER', href: '/tum-urunler' },
   { name: 'YENİ GELENLER', href: '/tum-urunler?filtre=yeni', badge: 'fire' },
   { name: 'ÇOK SATANLAR', href: '/tum-urunler?filtre=cok-satanlar' },
+]
+
+const fallbackDynamicMenuCategories: MenuCategory[] = [
   { name: 'ÇANTA', href: '/tum-urunler?kategori=canta' },
   { name: 'SÜET ÇANTA', href: '/tum-urunler?kategori=suet-canta' },
   { name: 'OMUZ ÇANTASI', href: '/tum-urunler?kategori=omuz-cantasi' },
@@ -18,14 +34,6 @@ const menuCategories = [
   { name: 'BAGET ÇANTA', href: '/tum-urunler?kategori=baget-canta' },
   { name: 'EL ÇANTASI', href: '/tum-urunler?kategori=el-cantasi' },
   { name: 'MAKYAJ ÇANTASI', href: '/tum-urunler?kategori=makyaj-cantasi' },
-  { name: 'LAPTOP ÇANTASI', href: '/tum-urunler?kategori=laptop-cantasi' },
-  { name: 'SPOR ÇANTASI', href: '/tum-urunler?kategori=spor-cantasi' },
-  { name: 'CÜZDAN VE KARTLIKLAR', href: '/tum-urunler?kategori=cuzdan-kartlik' },
-  { name: 'TARAK', href: '/tum-urunler?kategori=tarak' },
-  { name: 'AHŞAP TARAK', href: '/tum-urunler?kategori=ahsap-tarak' },
-  { name: 'KEMİK TARAK', href: '/tum-urunler?kategori=kemik-tarak' },
-  { name: 'CEP TARAĞI', href: '/tum-urunler?kategori=cep-taragi' },
-  { name: 'SAÇ FIRÇASI', href: '/tum-urunler?kategori=sac-fircasi' },
 ]
 
 const accountLinks = [
@@ -62,13 +70,29 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [isCartOpen, setIsCartOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [customerName, setCustomerName] = useState('')
   const [isAuthLoading, setIsAuthLoading] = useState(true)
-  const { items, totalItems, removeItem, updateItemQuantity } = useCart()
+  const [dynamicCollections, setDynamicCollections] = useState<MenuCategory[]>([])
+  const [searchProducts, setSearchProducts] = useState<SearchProduct[]>([])
+  const { items, totalItems, removeItem, updateItemQuantity, isDrawerOpen, setDrawerOpen } = useCart()
   const cartTotalAmount = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+
+  const menuCategories = useMemo(() => {
+    const seen = new Set<string>()
+    const dynamicSource =
+      dynamicCollections.length > 0 ? dynamicCollections : fallbackDynamicMenuCategories
+
+    const dynamic = dynamicSource.filter((item) => {
+      const key = item.href.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
+    return [...fixedMenuCategories, ...dynamic].slice(0, 10)
+  }, [dynamicCollections])
 
   const filteredSearchCategories = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase('tr')
@@ -77,6 +101,65 @@ export function Navbar() {
       category.name.toLocaleLowerCase('tr').includes(query)
     )
   }, [searchQuery])
+
+  const filteredSearchProducts = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase('tr')
+    if (!query || query.length < 2) return []
+    return searchProducts
+      .filter((product) => product.name.toLocaleLowerCase('tr').includes(query))
+      .slice(0, 8)
+  }, [searchProducts, searchQuery])
+
+  useEffect(() => {
+    const loadCollections = async () => {
+      try {
+        const response = await fetch('/api/storefront/collections', { cache: 'no-store' })
+        if (!response.ok) {
+          throw new Error(`Collections request failed with status ${response.status}`)
+        }
+        const data = (await response.json()) as {
+          collections?: Array<{ name: string; href: string }>
+        }
+        setDynamicCollections(
+          (data.collections ?? []).map((item) => ({
+            name: item.name.toLocaleUpperCase('tr'),
+            href: item.href,
+          }))
+        )
+      } catch (error) {
+        console.error('Koleksiyonlar yüklenemedi', error)
+        setDynamicCollections([])
+      }
+    }
+
+    loadCollections()
+  }, [])
+
+  useEffect(() => {
+    const loadSearchProducts = async () => {
+      if (!isSearchOpen || searchProducts.length > 0) return
+      try {
+        const response = await fetch('/api/shopify/products?first=80', { cache: 'no-store' })
+        if (!response.ok) return
+        const data = (await response.json()) as {
+          products?: Array<{ id?: string; name?: string; slug?: string }>
+        }
+        setSearchProducts(
+          (data.products ?? [])
+            .map((product) => ({
+              id: String(product.id || ''),
+              name: String(product.name || ''),
+              slug: String(product.slug || ''),
+            }))
+            .filter((product) => product.id && product.name && product.slug)
+        )
+      } catch {
+        setSearchProducts([])
+      }
+    }
+
+    loadSearchProducts()
+  }, [isSearchOpen, searchProducts.length])
 
   useEffect(() => {
     const loadSession = async () => {
@@ -118,7 +201,7 @@ export function Navbar() {
 
   // Lock body scroll when full-screen panels are open
   useEffect(() => {
-    if (isMobileMenuOpen || isSearchOpen || isCartOpen) {
+    if (isMobileMenuOpen || isSearchOpen || isDrawerOpen) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
@@ -126,7 +209,7 @@ export function Navbar() {
     return () => {
       document.body.style.overflow = ''
     }
-  }, [isMobileMenuOpen, isSearchOpen, isCartOpen])
+  }, [isMobileMenuOpen, isSearchOpen, isDrawerOpen])
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -139,6 +222,19 @@ export function Navbar() {
   const authLink = isAuthenticated
     ? { href: '/account', label: customerName || 'Hesabım' }
     : { href: '/giris', label: 'Üye Girişi' }
+
+  const desktopAccountLinks = isAuthenticated
+    ? [
+        { name: 'Üyelik Bilgilerim', href: '/account?tab=profile', icon: User },
+        { name: 'Siparişlerim', href: '/account?tab=orders', icon: Package },
+        { name: 'Favorilerim', href: '/account?tab=favorites', icon: Heart },
+        { name: 'Adres Defterim', href: '/account?tab=addresses', icon: ChevronRight },
+        { name: 'İletişim', href: '/iletisim', icon: Mail },
+      ]
+    : [
+        { name: 'Üye Girişi', href: '/giris', icon: LogIn },
+        { name: 'Üye Ol', href: '/giris?mode=register', icon: User },
+      ]
 
   const menuAccountLinks = isAuthenticated
     ? accountLinks
@@ -200,28 +296,64 @@ export function Navbar() {
               >
                 <Search className="h-5 w-5 text-bronze transition-colors group-hover:text-gold" strokeWidth={1.5} />
               </button>
-              <Link
-                href={authLink.href}
-                className="group hidden items-center gap-2 p-2 transition-colors sm:flex"
-                aria-label={authLink.label}
-              >
-                <User className="h-5 w-5 text-bronze transition-colors group-hover:text-gold" strokeWidth={1.5} />
-                {!isAuthLoading ? (
-                  <span className="hidden text-xs font-medium uppercase tracking-[0.08em] text-bronze/75 lg:inline">
-                    {authLink.label}
-                  </span>
-                ) : null}
-              </Link>
-              {isAuthenticated ? (
-                <button
-                  onClick={handleLogout}
-                  className="hidden text-[11px] font-medium uppercase tracking-[0.08em] text-bronze/70 transition-colors hover:text-rose lg:block"
+              <div className="group relative hidden sm:block">
+                <Link
+                  href={authLink.href}
+                  className="flex items-center gap-2 p-2 transition-colors"
+                  aria-label={authLink.label}
                 >
-                  Çıkış
-                </button>
-              ) : null}
+                  <User className="h-5 w-5 text-bronze transition-colors group-hover:text-gold" strokeWidth={1.5} />
+                  {!isAuthLoading ? (
+                    <span className="hidden text-xs font-medium uppercase tracking-[0.08em] text-bronze/75 lg:inline">
+                      {authLink.label}
+                    </span>
+                  ) : null}
+                </Link>
+
+                <div className="pointer-events-none absolute right-0 top-full z-[70] mt-2 w-72 translate-y-2 opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                  <div className="absolute -top-3 left-0 h-3 w-full" />
+                  <div className="absolute -top-1 right-7 h-3 w-3 rotate-45 border-l border-t border-bronze/15 bg-background/95 backdrop-blur-sm" />
+                  <div className="overflow-hidden rounded-xl border border-bronze/15 bg-background/95 shadow-[0_18px_40px_rgba(76,56,36,0.18)] backdrop-blur-sm">
+                    <div className="border-b border-bronze/10 bg-gradient-to-r from-ivory-warm to-background px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-bronze/55">
+                        {isAuthenticated ? 'Hesap Menüsü' : 'Hoş Geldiniz'}
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-bronze-dark">
+                        {isAuthenticated ? authLink.label : 'Hesabınıza giriş yapın'}
+                      </p>
+                    </div>
+                    <ul className="py-2">
+                      {desktopAccountLinks.map((item) => {
+                        const Icon = item.icon
+                        return (
+                          <li key={item.name}>
+                            <Link
+                              href={item.href}
+                              className="group/item flex items-center justify-between border-b border-bronze/10 px-4 py-3 text-[15px] text-bronze transition-colors hover:bg-ivory-warm hover:text-gold"
+                            >
+                              <span>{item.name}</span>
+                              <Icon className="h-4 w-4 text-bronze/40 transition-transform duration-200 group-hover/item:translate-x-0.5 group-hover/item:text-gold" strokeWidth={1.7} />
+                            </Link>
+                          </li>
+                        )
+                      })}
+                      {isAuthenticated ? (
+                        <li>
+                          <button
+                            onClick={handleLogout}
+                            className="group/item flex w-full items-center justify-between px-4 py-3 text-left text-[15px] text-rose transition-colors hover:bg-ivory-warm hover:text-rose/80"
+                          >
+                            <span>Çıkış Yap</span>
+                            <ChevronRight className="h-4 w-4 text-rose/50 transition-transform duration-200 group-hover/item:translate-x-0.5" strokeWidth={1.7} />
+                          </button>
+                        </li>
+                      ) : null}
+                    </ul>
+                  </div>
+                </div>
+              </div>
               <button
-                onClick={() => setIsCartOpen(true)}
+                onClick={() => setDrawerOpen(true)}
                 className="group relative p-2 transition-colors"
                 aria-label="Alışveriş çantası"
               >
@@ -289,6 +421,27 @@ export function Navbar() {
                   </div>
                 </div>
 
+                {filteredSearchProducts.length > 0 && (
+                  <div className="border-t border-bronze/10 pt-4">
+                    <p className="mb-3 text-sm font-medium text-bronze">Ürün Sonuçları</p>
+                    <div className="space-y-2">
+                      {filteredSearchProducts.map((product) => (
+                        <Link
+                          key={product.id}
+                          href={`/product/${product.slug}`}
+                          onClick={() => {
+                            setIsSearchOpen(false)
+                            setSearchQuery('')
+                          }}
+                          className="block rounded-md border border-bronze/12 px-3 py-2 text-sm text-bronze transition-colors hover:border-bronze/30 hover:bg-ivory"
+                        >
+                          {product.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="border-t border-bronze/10 pt-4">
                   <p className="mb-3 text-sm font-medium text-bronze">Filtre Kategorileri</p>
                   <div className="flex flex-wrap gap-2">
@@ -319,15 +472,15 @@ export function Navbar() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {isCartOpen && (
+        {isDrawerOpen && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[64] bg-black/35"
-              onClick={() => setIsCartOpen(false)}
+              className="fixed inset-0 z-[100] bg-black/35"
+              onClick={() => setDrawerOpen(false)}
             />
 
             <motion.aside
@@ -335,16 +488,16 @@ export function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed right-0 top-0 z-[65] h-full w-full max-w-md border-l border-bronze/15 bg-background shadow-2xl"
+              className="fixed right-0 top-0 z-[101] flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col border-l border-bronze/15 bg-background shadow-2xl"
             >
-              <div className="flex h-full flex-col">
-                <div className="flex items-center justify-between border-b border-bronze/10 px-5 py-4">
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div className="flex shrink-0 items-center justify-between border-b border-bronze/10 bg-background px-5 py-4">
                   <div>
                     <h3 className="text-lg font-medium text-bronze-dark">Sepetim</h3>
                     <p className="text-xs text-bronze/55">{totalItems} ürün</p>
                   </div>
                   <button
-                    onClick={() => setIsCartOpen(false)}
+                    onClick={() => setDrawerOpen(false)}
                     className="rounded-md p-2 text-bronze/70 transition-colors hover:bg-ivory-warm hover:text-bronze"
                     aria-label="Sepeti kapat"
                   >
@@ -352,7 +505,7 @@ export function Navbar() {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 py-4">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
                   {items.length === 0 ? (
                     <div className="rounded-xl border border-bronze/15 bg-ivory-warm p-5 text-center">
                       <p className="text-sm text-bronze/70">Sepetiniz şu anda boş.</p>
@@ -425,24 +578,27 @@ export function Navbar() {
                   )}
                 </div>
 
-                <div className="border-t border-bronze/10 px-5 py-4">
+                <div
+                  className="shrink-0 border-t border-bronze/15 bg-[#fdf8f0] px-5 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-4 shadow-[0_-12px_40px_-18px_rgba(66,46,35,0.18)]"
+                >
                   <div className="mb-3 flex items-center justify-between text-sm">
                     <span className="text-bronze/65">Toplam</span>
                     <span className="font-semibold text-bronze-dark">
-                      {cartTotalAmount.toLocaleString('tr-TR')} TL
+                      {cartTotalAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                      TL
                     </span>
                   </div>
                   <Link
                     href="/odeme"
-                    onClick={() => setIsCartOpen(false)}
-                    className="block rounded-md bg-bronze px-4 py-3 text-center text-sm font-medium uppercase tracking-wide text-white transition-colors hover:bg-bronze-dark"
+                    onClick={() => setDrawerOpen(false)}
+                    className="block rounded-xl bg-bronze px-4 py-3.5 text-center text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-bronze-dark"
                   >
                     Ödemeyi Tamamla
                   </Link>
                   <Link
                     href="/tum-urunler"
-                    onClick={() => setIsCartOpen(false)}
-                    className="mt-2 block rounded-md border border-bronze/25 px-4 py-3 text-center text-sm font-medium uppercase tracking-wide text-bronze transition-colors hover:bg-ivory-warm"
+                    onClick={() => setDrawerOpen(false)}
+                    className="mt-2 block rounded-xl border border-bronze/25 bg-white/90 px-4 py-3 text-center text-sm font-medium uppercase tracking-wide text-bronze transition-colors hover:bg-ivory-warm"
                   >
                     Alışverişe Geri Dön
                   </Link>

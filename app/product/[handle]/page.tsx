@@ -145,7 +145,7 @@ export default async function ProductByHandlePage({ params }: PageProps) {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="pb-20 pt-24">
+      <main className="pb-32 pt-24">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <nav className="flex items-center gap-2 text-sm text-bronze/60">
             <Link href="/" className="transition-colors hover:text-bronze">
@@ -161,26 +161,14 @@ export default async function ProductByHandlePage({ params }: PageProps) {
         </div>
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <ProductDetailClient product={product} />
-
-          {!!productSpecs.length && (
-            <section className="mt-10 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5">
-              <p className="mb-3 text-xs uppercase tracking-[0.2em] text-bronze/70">Ürün Özellikleri</p>
-              <div className="divide-y divide-bronze/10">
-                {productSpecs.map((field) => (
-                  <details key={field.key} className="group py-2">
-                    <summary className="cursor-pointer list-none py-3 text-sm font-medium text-bronze-dark">
-                      <span className="inline-flex w-full items-center justify-between">
-                        <span>{prettyMetafieldLabel(field.key)}</span>
-                        <span className="text-bronze/50 transition-transform group-open:rotate-180">⌄</span>
-                      </span>
-                    </summary>
-                    <p className="pb-3 pr-8 text-sm leading-relaxed text-bronze/75">{field.value}</p>
-                  </details>
-                ))}
-              </div>
-            </section>
-          )}
+          <ProductDetailClient
+            product={product}
+            productSpecs={productSpecs.map((field) => ({
+              key: field.key,
+              label: prettyMetafieldLabel(field.key),
+              value: field.value,
+            }))}
+          />
 
           <section className="mt-10 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-6 sm:p-7">
             <p className="text-xs uppercase tracking-[0.2em] text-bronze/70">Müşteri Değerlendirmeleri</p>

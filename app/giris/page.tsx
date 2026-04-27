@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, LogIn, UserPlus, ShieldCheck, Truck, RotateCcw } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
@@ -12,7 +12,9 @@ type AuthMode = 'login' | 'register'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<AuthMode>('login')
+  const searchParams = useSearchParams()
+  const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login'
+  const [mode, setMode] = useState<AuthMode>(initialMode)
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')

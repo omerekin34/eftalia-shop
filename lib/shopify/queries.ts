@@ -116,6 +116,20 @@ export const PRODUCT_BY_HANDLE_QUERY = /* GraphQL */ `
   }
 `
 
+export const COLLECTIONS_QUERY = /* GraphQL */ `
+  query Collections($first: Int!) {
+    collections(first: $first, sortKey: UPDATED_AT, reverse: true) {
+      edges {
+        node {
+          id
+          title
+          handle
+        }
+      }
+    }
+  }
+`
+
 export const CART_CREATE_MUTATION = /* GraphQL */ `
   mutation CartCreate($input: CartInput) {
     cartCreate(input: $input) {

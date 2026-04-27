@@ -31,6 +31,7 @@ export interface Product {
   isNew?: boolean
   isBestseller?: boolean
   inStock?: boolean
+  stockQuantity?: number
 }
 
 // Categories structure
@@ -38,7 +39,6 @@ const categories = {
   'canta': {
     name: 'Çanta',
     subcategories: [
-      '14 Şubat Sevgililer Günü Hediye',
       'Süet Çantası',
       'El Çantası',
       'Makyaj Çantası',
@@ -63,8 +63,7 @@ const categories = {
   }
 }
 
-// Color options
-const colorOptions = [
+const defaultColorOptions = [
   { name: 'Krem', hex: '#F5F5DC' },
   { name: 'Siyah', hex: '#1a1a1a' },
   { name: 'Antrasit', hex: '#383838' },
@@ -76,8 +75,7 @@ const colorOptions = [
   { name: 'Taba', hex: '#A67B5B' },
 ]
 
-// Price ranges
-const priceRanges = [
+const defaultPriceRanges = [
   { label: '₺0 - ₺500', min: 0, max: 500 },
   { label: '₺500 - ₺1.000', min: 500, max: 1000 },
   { label: '₺1.000 - ₺2.000', min: 1000, max: 2000 },
@@ -140,6 +138,16 @@ const safeDecodeURIComponent = (value: string) => {
   }
 }
 
+const formatTryPrice = (value: number) =>
+  `₺${Math.round(value).toLocaleString('tr-TR')}`
+
+const getPriceRoundUnit = (maxPrice: number) => {
+  if (maxPrice <= 2000) return 100
+  if (maxPrice <= 5000) return 250
+  if (maxPrice <= 10000) return 500
+  return 1000
+}
+
  function ProductsContent() {
   const searchParams = useSearchParams()
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
@@ -155,6 +163,70 @@ const safeDecodeURIComponent = (value: string) => {
   const [products, setProducts] = useState<Product[]>([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
   const [productsError, setProductsError] = useState<string | null>(null)
+  const [featuredCollectionFilters, setFeaturedCollectionFilters] = useState<string[]>([])
+
+  const colorOptions = useMemo(() => {
+    const uniqueColors = new Map<string, { name: string; hex: string }>()
+    products.forEach((product) => {
+      product.colors.forEach((color) => {
+        const key = normalizeForSearch(color.name || '')
+        if (!key || key === 'standart' || uniqueColors.has(key)) return
+        uniqueColors.set(key, {
+          name: color.name,
+          hex: color.hex || '#D4C4A8',
+        })
+      })
+    })
+
+    const fromProducts = Array.from(uniqueColors.values()).sort((a, b) =>
+      a.name.localeCompare(b.name, 'tr')
+    )
+    return fromProducts.length > 0 ? fromProducts : defaultColorOptions
+  }, [products])
+
+  const priceRanges = useMemo(() => {
+    const prices = products
+      .map((product) => product.price)
+      .filter((price) => Number.isFinite(price) && price > 0)
+      .sort((a, b) => a - b)
+
+    if (prices.length < 2) return defaultPriceRanges
+
+    const minPrice = prices[0]
+    const maxPrice = prices[prices.length - 1]
+    const spread = maxPrice - minPrice
+    if (spread <= 0) return defaultPriceRanges
+
+    const unit = getPriceRoundUnit(maxPrice)
+    const step = Math.max(unit, Math.ceil(spread / 3 / unit) * unit)
+    const start = Math.max(0, Math.floor(minPrice / unit) * unit)
+
+    const firstEnd = start + step
+    const secondEnd = start + step * 2
+    const thirdEnd = start + step * 3
+
+    return [
+      { label: `${formatTryPrice(start)} - ${formatTryPrice(firstEnd)}`, min: start, max: firstEnd },
+      {
+        label: `${formatTryPrice(firstEnd)} - ${formatTryPrice(secondEnd)}`,
+        min: firstEnd,
+        max: secondEnd,
+      },
+      {
+        label: `${formatTryPrice(secondEnd)} - ${formatTryPrice(thirdEnd)}`,
+        min: secondEnd,
+        max: thirdEnd,
+      },
+      { label: `${formatTryPrice(thirdEnd)} üzeri`, min: thirdEnd, max: Infinity },
+    ]
+  }, [products])
+
+  useEffect(() => {
+    const allowedColorKeys = new Set(colorOptions.map((color) => normalizeForSearch(color.name)))
+    setSelectedColors((prev) =>
+      prev.filter((color) => allowedColorKeys.has(normalizeForSearch(color)))
+    )
+  }, [colorOptions])
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -173,6 +245,40 @@ const safeDecodeURIComponent = (value: string) => {
     }
 
     loadProducts()
+  }, [])
+
+  useEffect(() => {
+    const loadFeaturedCollections = async () => {
+      try {
+        const response = await fetch('/api/storefront/collections', { cache: 'no-store' })
+        if (!response.ok) return
+
+        const data = (await response.json()) as {
+          collections?: Array<{ name: string; href: string }>
+        }
+        const collections = data.collections ?? []
+
+        const featured = collections
+          .map((item) => item.name)
+          .filter((name) => {
+            const normalized = normalizeForSearch(name)
+            return (
+              normalized.includes('ozel') ||
+              normalized.includes('gunu') ||
+              normalized.includes('sevgililer') ||
+              normalized.includes('anneler') ||
+              normalized.includes('babalar')
+            )
+          })
+          .filter((name, index, arr) => arr.indexOf(name) === index)
+
+        setFeaturedCollectionFilters(featured)
+      } catch {
+        setFeaturedCollectionFilters([])
+      }
+    }
+
+    loadFeaturedCollections()
   }, [])
 
   // Read URL parameters and apply filters
@@ -228,6 +334,9 @@ const safeDecodeURIComponent = (value: string) => {
 
         if (matchedSubcategory) {
           setSelectedSubcategories([matchedSubcategory])
+        } else {
+          // Allow dynamic Shopify collection handles/titles from menu links.
+          setSelectedSubcategories([decodedKategori])
         }
       }
     }
@@ -468,6 +577,7 @@ const safeDecodeURIComponent = (value: string) => {
           <aside className="hidden w-64 shrink-0 lg:block">
             <FilterSidebar
               categories={categories}
+              featuredCollectionFilters={featuredCollectionFilters}
               colorOptions={colorOptions}
               priceRanges={priceRanges}
               selectedCategories={selectedCategories}
@@ -538,6 +648,7 @@ const safeDecodeURIComponent = (value: string) => {
         isOpen={mobileFilterOpen}
         onClose={() => setMobileFilterOpen(false)}
         categories={categories}
+        featuredCollectionFilters={featuredCollectionFilters}
         colorOptions={colorOptions}
         priceRanges={priceRanges}
         selectedCategories={selectedCategories}

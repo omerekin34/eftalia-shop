@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Heart } from 'lucide-react'
+import { useFavorites } from '@/components/storefront/favorites-context'
 
 interface ProductColor {
   name: string
@@ -25,6 +26,7 @@ interface Product {
   isNew?: boolean
   isBestseller?: boolean
   inStock?: boolean
+  stockQuantity?: number
 }
 
 interface ProductCardProps {
@@ -34,8 +36,9 @@ interface ProductCardProps {
 
 export function ProductCard({ product, showQuickAdd = false }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
-  const [isFavorite, setIsFavorite] = useState(false)
   const [selectedColor, setSelectedColor] = useState(product.colors[0])
+  const { isFavorite, toggleFavorite } = useFavorites()
+  const favorite = isFavorite(product.id)
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('tr-TR', {
@@ -53,6 +56,9 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
   const discountPercent = hasDiscount
     ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
     : 0
+  const lowStockCount =
+    product.inStock === false ? 0 : Math.max(0, Number(product.stockQuantity || 0))
+  const isLowStock = lowStockCount > 0 && lowStockCount <= 3
 
   return (
     <motion.article
@@ -99,13 +105,18 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
         )}
 
         {/* Badges */}
-        <div className="absolute left-2 top-2 flex flex-col gap-1 sm:left-3 sm:top-3">
+        <div className="absolute left-2 top-2 z-10 flex flex-col gap-1 sm:left-3 sm:top-3">
           {hasDiscount && (
             <span className="rounded-md bg-[#7B1E2B] px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white shadow-md sm:text-xs">
               %{discountPercent} İndirim
             </span>
           )}
         </div>
+        {isLowStock && (
+          <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-r from-[#7B1E2B] via-[#a02a3b] to-[#7B1E2B] px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.65)] sm:text-xs">
+            Son {lowStockCount} Ürün - Tükenmeden Al
+          </div>
+        )}
         {product.isNew && (
           <span className="absolute right-12 top-2 rounded-md border border-black/80 bg-black/85 px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-[#E9D5A1] shadow-md sm:right-14 sm:top-3 sm:text-xs">
             YENİ
@@ -116,14 +127,22 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
         <button
           onClick={(e) => {
             e.preventDefault()
-            setIsFavorite(!isFavorite)
+            toggleFavorite({
+              id: product.id,
+              slug: product.slug,
+              name: product.name,
+              price: product.price,
+              originalPrice: product.originalPrice,
+              images: product.images,
+              inStock: product.inStock,
+            })
           }}
           className="absolute right-2 top-2 rounded-full bg-white/80 p-1.5 transition-all hover:bg-white sm:right-3 sm:top-3 sm:p-2"
-          aria-label={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
+          aria-label={favorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
         >
           <Heart
             className={`h-4 w-4 transition-colors sm:h-5 sm:w-5 ${
-              isFavorite ? 'fill-rose text-rose' : 'text-bronze/60'
+              favorite ? 'fill-rose text-rose' : 'text-bronze/60'
             }`}
           />
         </button>
@@ -177,15 +196,15 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
         <div className="flex items-baseline gap-2">
           {hasDiscount && (
             <span className="text-xs text-zinc-400 line-through sm:text-sm">
-              {formatPrice(product.originalPrice)}
+              {formatPrice(product.originalPrice!)}
             </span>
           )}
           <span className={`text-sm font-semibold sm:text-base ${hasDiscount ? 'text-[#7B1E2B]' : 'text-bronze'}`}>
             {formatPrice(product.price)}
           </span>
         </div>
-        <p className={`text-xs ${product.inStock === false ? 'text-[#c41e3a]' : 'text-bronze/55'}`}>
-          {product.inStock === false ? 'Tükendi' : 'Stokta'}
+        <p className={`text-xs font-medium ${product.inStock === false ? 'text-[#c41e3a]' : isLowStock ? 'text-[#7B1E2B]' : 'text-bronze/55'}`}>
+          {product.inStock === false ? 'Tükendi' : isLowStock ? `Son ${lowStockCount} ürün` : 'Stokta'}
         </p>
       </div>
     </motion.article>

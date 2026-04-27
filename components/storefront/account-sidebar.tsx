@@ -2,20 +2,19 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Gift, Heart, LogOut, MapPin, Package, Star, User, UserCog } from 'lucide-react'
+import { Heart, LogOut, MapPin, Package, Star, User, UserCog } from 'lucide-react'
 
-export type AccountNavTabKey = 'dashboard' | 'orders' | 'profile' | 'addresses' | 'coupons' | 'favorites'
+export type AccountNavTabKey = 'dashboard' | 'orders' | 'profile' | 'addresses' | 'favorites'
 
 type SidebarEntry =
   | { type: 'tab'; key: AccountNavTabKey; label: string; icon: typeof User }
   | { type: 'link'; href: string; label: string; icon: typeof Star }
 
 const sidebarEntries: SidebarEntry[] = [
-  { type: 'tab', key: 'dashboard', label: 'Panel', icon: User },
+  { type: 'tab', key: 'dashboard', label: 'Hesabım', icon: User },
   { type: 'tab', key: 'orders', label: 'Siparişlerim', icon: Package },
   { type: 'tab', key: 'profile', label: 'Üyelik Bilgilerim', icon: UserCog },
   { type: 'tab', key: 'addresses', label: 'Adres Defterim', icon: MapPin },
-  { type: 'tab', key: 'coupons', label: 'Kuponlarım', icon: Gift },
   { type: 'link', href: '/account/reviews', label: 'Değerlendirmelerim', icon: Star },
   { type: 'tab', key: 'favorites', label: 'Favorilerim', icon: Heart },
 ]
@@ -29,7 +28,6 @@ function getTabFromParam(value: string | null): AccountNavTabKey {
   if (value === 'orders') return 'orders'
   if (value === 'favorites') return 'favorites'
   if (value === 'addresses') return 'addresses'
-  if (value === 'coupons') return 'coupons'
   if (value === 'profile') return 'profile'
   return 'dashboard'
 }

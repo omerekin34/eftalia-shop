@@ -18,6 +18,9 @@ interface CartContextValue {
   addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void
   removeItem: (itemId: string, color?: string) => void
   updateItemQuantity: (itemId: string, color: string | undefined, quantity: number) => void
+  /** Sepet yan paneli açık mı (mobil sticky bar vb. ile çakışmayı önlemek için). */
+  isDrawerOpen: boolean
+  setDrawerOpen: (open: boolean) => void
 }
 
 const CartContext = createContext<CartContextValue | undefined>(undefined)
@@ -25,6 +28,7 @@ const CART_STORAGE_KEY = 'eftelia_cart_items'
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [isDrawerOpen, setDrawerOpen] = useState(false)
 
   useEffect(() => {
     try {
@@ -91,7 +95,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ items, totalItems, addItem, removeItem, updateItemQuantity }}
+      value={{
+        items,
+        totalItems,
+        addItem,
+        removeItem,
+        updateItemQuantity,
+        isDrawerOpen,
+        setDrawerOpen,
+      }}
     >
       {children}
     </CartContext.Provider>

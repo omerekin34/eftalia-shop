@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       | { action: 'remove'; cartId: string; lineIds: string[] }
 
     if (body.action === 'create') {
-      const cart = await createCart(body.lines)
+      const cart = await createCart(body.lines, { buyerCountryCode: 'TR' })
       return NextResponse.json({ cart })
     }
 
