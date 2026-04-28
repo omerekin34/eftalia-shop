@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Instagram, MapPin } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 const footerLinks = {
   shop: [
@@ -31,6 +32,8 @@ export function Footer() {
   const [email, setEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [shippingExcerpt, setShippingExcerpt] = useState('')
+  const [shippingPolicyUrl, setShippingPolicyUrl] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,6 +46,30 @@ export function Footer() {
     setIsSubmitting(false)
     setEmail('')
   }
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const response = await fetch('/api/storefront/shipping-policy', { cache: 'no-store' })
+        const data = (await response.json()) as {
+          shippingPolicy?: { excerpt?: string; url?: string } | null
+        }
+        if (!cancelled) {
+          setShippingExcerpt(data.shippingPolicy?.excerpt || '')
+          setShippingPolicyUrl(data.shippingPolicy?.url || '')
+        }
+      } catch {
+        if (!cancelled) {
+          setShippingExcerpt('')
+          setShippingPolicyUrl('')
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <footer className="bg-ivory-warm">
@@ -57,7 +84,7 @@ export function Footer() {
             className="flex flex-col items-center text-center"
           >
             <p className="text-xs uppercase tracking-[0.25em] text-bronze/60">
-              Eftelia Kulübü
+              EFTALIA CASE Kulübü
             </p>
             <h3 className="mt-2 font-serif text-2xl tracking-wide text-bronze sm:text-3xl">
               Koleksiyonlardan İlk Sen Haberdar Ol
@@ -104,12 +131,9 @@ export function Footer() {
           {/* Brand column */}
           <div className="lg:col-span-2">
             <Link href="/" className="inline-block">
-              <div className="inline-flex flex-col items-center rounded-md border border-bronze/15 bg-background/70 px-6 py-4 backdrop-blur-[1px]">
-                <span className="font-serif text-2xl tracking-[0.28em] text-bronze-dark sm:text-3xl">
-                  B&apos;ETUI EFTELIA
-                </span>
-                <span className="mt-1 text-[10px] tracking-[0.35em] text-rose sm:text-xs">
-                  LEATHER GOODS
+              <div className="group inline-flex items-center rounded-md border border-bronze/15 bg-background/70 px-5 py-3 backdrop-blur-[1px] transition-all duration-300 hover:border-gold/40 hover:bg-white">
+                <span className="font-serif text-2xl tracking-[0.24em] text-bronze-dark transition-colors duration-300 group-hover:text-gold sm:text-3xl">
+                  EFTALIA CASE
                 </span>
               </div>
             </Link>
@@ -213,6 +237,24 @@ export function Footer() {
           <MapPin className="h-3 w-3" strokeWidth={1.5} />
           <span>Özenle üretildi, dünya genelinde gönderilir</span>
         </div>
+        {shippingExcerpt ? (
+          <div className="mx-auto mt-4 max-w-3xl rounded-lg border border-bronze/15 bg-white/70 px-4 py-3 text-center text-xs leading-relaxed text-bronze/70">
+            {shippingExcerpt}
+            {shippingPolicyUrl ? (
+              <>
+                {' '}
+                <Link
+                  href={shippingPolicyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-bronze underline-offset-2 hover:underline"
+                >
+                  Detaylar
+                </Link>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {/* Bottom bar */}
@@ -220,12 +262,12 @@ export function Footer() {
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <p className="text-xs text-bronze-light">
-              &copy; {new Date().getFullYear()} {"B'ETUI EFTELIA"}. Tüm hakları saklıdır.
+              &copy; {new Date().getFullYear()} {'EFTALIA CASE'}. Tüm hakları saklıdır.
             </p>
             <div className="flex items-center gap-6 text-xs text-bronze-light">
-              <Link href="#" className="transition-colors hover:text-gold">Gizlilik</Link>
-              <Link href="#" className="transition-colors hover:text-gold">Şartlar</Link>
-              <Link href="#" className="transition-colors hover:text-gold">Çerezler</Link>
+              <Link href="/gizlilik-politikasi" className="transition-colors hover:text-gold">Gizlilik</Link>
+              <Link href="/sartlar" className="transition-colors hover:text-gold">Şartlar</Link>
+              <Link href="/cerez-politikasi" className="transition-colors hover:text-gold">Çerezler</Link>
             </div>
           </div>
         </div>

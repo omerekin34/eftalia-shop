@@ -51,7 +51,7 @@ export function Hero() {
             </motion.div>
 
             <h1 className="font-serif text-4xl leading-tight tracking-wide text-bronze sm:text-5xl md:text-6xl lg:text-7xl text-balance">
-              {"B'ETUI EFTELIA:"}
+              {'EFTALIA CASE:'}
               <br />
               <span className="italic text-gold">{'"'}Her Detayda</span>
               <br />
@@ -98,20 +98,37 @@ export function Hero() {
             transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="relative"
           >
-            <div className="relative aspect-[4/5] overflow-hidden bg-ivory-warm">
+            <div className="group relative aspect-[4/5] overflow-hidden rounded-sm border border-bronze/10 bg-transparent shadow-[0_28px_80px_-45px_rgba(66,46,35,0.6)]">
+              {/* Ambient glow */}
+              <div className="pointer-events-none absolute -inset-10 bg-[radial-gradient(circle_at_50%_40%,rgba(200,162,125,0.24),transparent_55%)]" />
               {/* Background texture */}
-              <div className="absolute inset-0 bg-gradient-to-br from-ivory via-ivory-warm to-ivory-dark" />
+              <div className="absolute inset-0 bg-gradient-to-br from-background via-ivory-warm/70 to-ivory-dark/70" />
+              <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.22)_40%,transparent_70%)] opacity-30" />
               
               {/* Logo Image */}
-              <div className="absolute inset-0 flex items-center justify-center p-8">
-                <Image
-                  src="/images/logo.jpg"
-                  alt="B'ETUI EFTELIA - Her Detayda Zarafet"
-                  width={500}
-                  height={600}
-                  className="h-full w-full object-contain"
-                  priority
-                />
+              <motion.div
+                animate={{ y: [0, -6, 0] }}
+                transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-0 flex items-center justify-center p-8 transition-transform duration-500 group-hover:scale-[1.035]"
+              >
+                <div className="h-full w-full rounded-sm bg-ivory-warm/90 p-2">
+                  <Image
+                    src="/images/logo.jpg"
+                    alt="EFTALIA CASE - Her Detayda Zarafet"
+                    width={500}
+                    height={600}
+                    className="h-full w-full object-contain mix-blend-multiply brightness-[0.98] contrast-110 saturate-125"
+                    priority
+                  />
+                </div>
+              </motion.div>
+
+              {/* Gold shimmer sweep */}
+              <div className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-[linear-gradient(90deg,transparent_0%,rgba(212,175,55,0.45)_50%,transparent_100%)] opacity-0 transition-all duration-700 group-hover:left-[115%] group-hover:opacity-100" />
+
+              {/* Premium badge */}
+              <div className="absolute right-4 top-4 rounded-full border border-gold/40 bg-ivory/80 px-3 py-1 text-[10px] tracking-[0.2em] text-bronze backdrop-blur-sm">
+                PREMIUM CRAFT
               </div>
               
               {/* Corner frames */}

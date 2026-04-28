@@ -279,7 +279,7 @@ export function Navbar() {
                 className="flex flex-col items-center"
               >
                 <h1 className="font-serif text-lg tracking-[0.35em] text-bronze-dark sm:text-xl md:text-2xl">
-                  B&apos;ETUI EFTELIA
+                  EFTALIA CASE
                 </h1>
                 <span className="mt-0.5 text-[9px] tracking-[0.4em] text-rose sm:text-[10px] md:text-xs">
                   LEATHER GOODS
@@ -514,7 +514,11 @@ export function Navbar() {
                     <div className="space-y-3">
                       {items.map((item) => (
                         <div key={`${item.id}-${item.color || 'renksiz'}`} className="rounded-xl border border-bronze/15 bg-ivory-warm p-4">
-                          <div className="flex gap-3">
+                          <Link
+                            href={`/product/${item.slug}${item.color ? `?color=${encodeURIComponent(item.color)}` : ''}`}
+                            onClick={() => setDrawerOpen(false)}
+                            className="flex gap-3 rounded-md transition-colors hover:bg-white/60"
+                          >
                             <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-bronze/15 bg-white">
                               {item.image ? (
                                 <Image
@@ -535,7 +539,7 @@ export function Navbar() {
                                 {item.color ? `Renk: ${item.color}` : 'Standart'}
                               </p>
                             </div>
-                          </div>
+                          </Link>
                           <div className="mt-3 flex items-center justify-between">
                             <div className="flex items-center border border-bronze/20 bg-white">
                               <button
@@ -743,13 +747,13 @@ export function Navbar() {
               </div>
 
               {/* Footer Brand */}
-              <div className="mt-auto border-t border-bronze/10 px-6 py-6">
-                <div className="inline-flex items-center rounded-md border border-bronze/20 bg-ivory-warm px-4 py-2.5">
-                  <span className="font-serif text-2xl tracking-[0.2em] text-bronze-dark">
-                    B&amp;E
+              <div className="group mt-auto border-t border-bronze/10 px-6 py-6">
+                <div className="inline-flex items-center rounded-md border border-bronze/20 bg-ivory-warm px-4 py-2.5 transition-all duration-300 group-hover:border-gold/40 group-hover:bg-white">
+                  <span className="font-serif text-xl tracking-[0.2em] text-bronze-dark transition-colors duration-300 group-hover:text-gold">
+                    EFTALIA CASE
                   </span>
                 </div>
-                <p className="mt-3 text-xs tracking-[0.25em] text-bronze/45">
+                <p className="mt-3 text-xs tracking-[0.25em] text-bronze/45 transition-colors duration-300 group-hover:text-bronze/60">
                   HER DETAYDA ZARAFET
                 </p>
               </div>

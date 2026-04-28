@@ -1,16 +1,28 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowUpRight } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
-const categories = [
+type CategoryItem = {
+  title: string
+  description: string
+  span: string
+  aspect: string
+  href: string
+  handle: string
+}
+
+const categories: CategoryItem[] = [
   {
     title: 'Makyaj Çantaları',
     description: 'Günlük ihtiyaçlarınız için zarif tasarımlar',
     span: 'col-span-1 row-span-1 md:col-span-1 md:row-span-2',
     aspect: 'aspect-[3/4] md:aspect-auto',
     href: '/tum-urunler?kategori=makyaj-cantasi',
+    handle: 'makyaj-cantasi',
   },
   {
     title: 'El Çantaları',
@@ -18,6 +30,7 @@ const categories = [
     span: 'col-span-1 row-span-1 md:col-span-2 md:row-span-1',
     aspect: 'aspect-square md:aspect-[2/1]',
     href: '/tum-urunler?kategori=el-cantasi',
+    handle: 'el-cantasi',
   },
   {
     title: 'Omuz Çantaları',
@@ -25,6 +38,7 @@ const categories = [
     span: 'col-span-1 row-span-1',
     aspect: 'aspect-square',
     href: '/tum-urunler?kategori=omuz-cantasi',
+    handle: 'omuz-cantasi',
   },
   {
     title: 'Spor Çantası',
@@ -32,10 +46,30 @@ const categories = [
     span: 'col-span-1 row-span-1',
     aspect: 'aspect-square',
     href: '/tum-urunler?kategori=spor-cantasi',
+    handle: 'spor-cantasi',
   },
 ]
 
 export function CategoryGrid() {
+  const [imageMap, setImageMap] = useState<Record<string, { imageUrl: string | null; imageAlt: string }>>({})
+
+  useEffect(() => {
+    const loadCategoryImages = async () => {
+      try {
+        const response = await fetch('/api/storefront/category-images', { cache: 'no-store' })
+        if (!response.ok) return
+        const data = (await response.json()) as {
+          categoryImages?: Record<string, { imageUrl: string | null; imageAlt: string }>
+        }
+        setImageMap(data.categoryImages || {})
+      } catch {
+        setImageMap({})
+      }
+    }
+
+    loadCategoryImages()
+  }, [])
+
   return (
     <section className="bg-background py-20 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -69,7 +103,26 @@ export function CategoryGrid() {
               >
               {/* Background pattern - hand-drawn style */}
               <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105">
-                <div className="absolute inset-0 bg-gradient-to-br from-ivory via-ivory-warm to-ivory-dark" />
+                {imageMap[category.handle]?.imageUrl ? (
+                  <>
+                    <Image
+                      src={imageMap[category.handle].imageUrl as string}
+                      alt={imageMap[category.handle].imageAlt || category.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/20 to-black/10" />
+                  </>
+                ) : null}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${
+                    imageMap[category.handle]?.imageUrl
+                      ? 'from-ivory/20 via-ivory-warm/25 to-ivory-dark/30'
+                      : 'from-ivory via-ivory-warm to-ivory-dark'
+                  }`}
+                />
+                {imageMap[category.handle]?.imageUrl ? <div className="absolute inset-0 bg-black/10" /> : null}
                 
                 {/* Sketch-style illustration */}
                 <svg className="absolute inset-0 h-full w-full opacity-20" viewBox="0 0 200 200">
@@ -88,9 +141,11 @@ export function CategoryGrid() {
                 </svg>
                 
                 {/* Category-specific illustrations */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <CategoryIllustration index={index} />
-                </div>
+                {!imageMap[category.handle]?.imageUrl ? (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <CategoryIllustration index={index} />
+                  </div>
+                ) : null}
               </div>
 
               {/* Hover border effect */}
@@ -100,7 +155,13 @@ export function CategoryGrid() {
               <div className="absolute inset-0 flex flex-col justify-end p-6 lg:p-8">
                 <div className="relative">
                   {/* Turkish title */}
-                  <h3 className="font-serif text-2xl tracking-wide text-bronze transition-colors group-hover:text-bronze-dark lg:text-3xl">
+                  <h3
+                    className={`font-serif text-2xl tracking-wide transition-colors lg:text-3xl ${
+                      imageMap[category.handle]?.imageUrl
+                        ? 'text-white group-hover:text-ivory'
+                        : 'text-bronze group-hover:text-bronze-dark'
+                    }`}
+                  >
                     {category.title}
                   </h3>
                   
@@ -108,13 +169,21 @@ export function CategoryGrid() {
                   <motion.p
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    className="mt-3 max-w-xs text-sm leading-relaxed text-bronze-light opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    className={`mt-3 max-w-xs text-sm leading-relaxed opacity-0 transition-opacity duration-300 group-hover:opacity-100 ${
+                      imageMap[category.handle]?.imageUrl ? 'text-ivory/90' : 'text-bronze-light'
+                    }`}
                   >
                     {category.description}
                   </motion.p>
 
                   {/* Arrow */}
-                  <div className="mt-4 flex items-center gap-2 text-bronze transition-colors group-hover:text-gold">
+                  <div
+                    className={`mt-4 flex items-center gap-2 transition-colors ${
+                      imageMap[category.handle]?.imageUrl
+                        ? 'text-ivory group-hover:text-white'
+                        : 'text-bronze group-hover:text-gold'
+                    }`}
+                  >
                     <span className="text-xs tracking-[0.15em]">KEŞFET</span>
                     <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={1.5} />
                   </div>

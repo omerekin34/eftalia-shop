@@ -124,6 +124,12 @@ export const COLLECTIONS_QUERY = /* GraphQL */ `
           id
           title
           handle
+          image {
+            url
+            altText
+            width
+            height
+          }
         }
       }
     }

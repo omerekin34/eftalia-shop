@@ -18,13 +18,13 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "B'ETUI EFTELIA | Luxury Leather Goods",
+  title: 'EFTALIA CASE | Luxury Leather Goods',
   description:
     'Detayın sanatını keşfedin. El yapımı deri ürünlerde küresel standartlar. Premium deri defter kılıfları, çantalar ve aksesuarlar.',
   keywords: ['luxury leather', 'handcrafted', 'leather goods', 'handbags', 'journal covers', 'artisan'],
   generator: 'v0.app',
   openGraph: {
-    title: "B'ETUI EFTELIA | Luxury Leather Goods",
+    title: 'EFTALIA CASE | Luxury Leather Goods',
     description: 'Detayın sanatını keşfedin. El yapımı deri ürünlerde küresel standartlar.',
     type: 'website',
   },
@@ -32,15 +32,13 @@ export const metadata: Metadata = {
     icon: [
       {
         url: '/icon-light-32x32.png',
+        type: 'image/png',
         media: '(prefers-color-scheme: light)',
       },
       {
         url: '/icon-dark-32x32.png',
+        type: 'image/png',
         media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
       },
     ],
     apple: '/apple-icon.png',

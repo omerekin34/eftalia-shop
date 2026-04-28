@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Check, Minus, Plus, RefreshCcw, ShieldCheck, Sparkles, Star, Truck, X } from 'lucide-react'
+import { Check, Minus, Plus, RefreshCcw, ShieldCheck, Sparkles, Star, Truck, X, MessageCircle } from 'lucide-react'
 import { useCart } from '@/components/storefront/cart-context'
 
 type ProductVariant = {
@@ -88,10 +89,13 @@ function getEmbeddableVideoUrl(videoUrl?: string) {
 export function ProductDetailClient({
   product,
   productSpecs = [],
+  initialColor,
 }: {
   product: ProductDetailData
   productSpecs?: ProductSpec[]
+  initialColor?: string
 }) {
+  const router = useRouter()
   const { addItem, isDrawerOpen } = useCart()
   const [quantity, setQuantity] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -117,6 +121,24 @@ export function ProductDetailClient({
 
   const colorValues = colorOption?.values || []
   const [selectedColor, setSelectedColor] = useState<string>(colorValues[0] || '')
+
+  useEffect(() => {
+    if (colorValues.length === 0) {
+      setSelectedColor('')
+      return
+    }
+
+    const requestedColor = String(initialColor || '').trim()
+    if (!requestedColor) {
+      setSelectedColor(colorValues[0])
+      return
+    }
+
+    const matchedColor =
+      colorValues.find((color) => color.toLocaleLowerCase('tr') === requestedColor.toLocaleLowerCase('tr')) ||
+      colorValues[0]
+    setSelectedColor(matchedColor)
+  }, [initialColor, colorValues, product.id])
 
   const selectedVariant = useMemo(() => {
     if (!product.variants.length) return null
@@ -149,6 +171,10 @@ export function ProductDetailClient({
   const inStock = selectedVariant
     ? selectedVariant.availableForSale && selectedVariant.quantityAvailable > 0
     : product.inStock
+  const maxSelectableQuantity =
+    selectedVariant && selectedVariant.quantityAvailable > 0
+      ? selectedVariant.quantityAvailable
+      : undefined
   const parsedReviewRating = Number.parseFloat(String(product.reviewRating ?? '').replace(',', '.'))
   const hasValidReviewRating = Number.isFinite(parsedReviewRating) && parsedReviewRating > 0
   const reviewCount = Number(product.reviewRatingCount || 0)
@@ -164,11 +190,50 @@ export function ProductDetailClient({
         price: selectedVariant.price || product.price,
         image: galleryImages[0],
         color: selectedColor || undefined,
+        maxQuantity: maxSelectableQuantity,
       },
       quantity
     )
     setIsAdded(true)
     setTimeout(() => setIsAdded(false), 1500)
+  }
+
+  const handleBuyNow = () => {
+    if (!selectedVariant || !inStock) return
+    addItem(
+      {
+        id: selectedVariant.id,
+        slug: product.slug,
+        name: product.name,
+        price: selectedVariant.price || product.price,
+        image: galleryImages[0],
+        color: selectedColor || undefined,
+        maxQuantity: maxSelectableQuantity,
+      },
+      quantity
+    )
+    router.push('/odeme')
+  }
+
+  const handleWhatsAppQuickOrder = () => {
+    if (!selectedVariant || !inStock) return
+    const rawPhone = String(process.env.NEXT_PUBLIC_WHATSAPP_PHONE || '')
+    const phone = rawPhone.replace(/\D/g, '')
+    if (!phone) {
+      setToastMessage('WhatsApp sipariş numarası yakında eklenecek.')
+      return
+    }
+
+    const messageLines = [
+      'Merhaba, hızlı sipariş vermek istiyorum.',
+      `Ürün: ${product.name}`,
+      selectedColor ? `Renk: ${selectedColor}` : '',
+      `Adet: ${quantity}`,
+      `Fiyat: ${formatPrice(displayPrice)}`,
+      `Ürün Linki: ${window.location.href}`,
+    ].filter(Boolean)
+    const message = encodeURIComponent(messageLines.join('\n'))
+    window.open(`https://wa.me/${phone}?text=${message}`, '_blank', 'noopener,noreferrer')
   }
 
   const handleZoomMove = (event: MouseEvent<HTMLDivElement>) => {
@@ -251,6 +316,11 @@ export function ProductDetailClient({
     const timer = setTimeout(() => setToastMessage(''), 2800)
     return () => clearTimeout(timer)
   }, [toastMessage])
+
+  useEffect(() => {
+    if (typeof maxSelectableQuantity !== 'number' || maxSelectableQuantity <= 0) return
+    setQuantity((prev) => Math.min(prev, maxSelectableQuantity))
+  }, [maxSelectableQuantity, selectedVariant?.id])
 
   return (
     <div
@@ -414,7 +484,16 @@ export function ProductDetailClient({
               <Minus className="h-4 w-4" />
             </button>
             <span className="w-12 text-center text-bronze">{quantity}</span>
-            <button onClick={() => setQuantity((q) => q + 1)} className="p-3 text-bronze">
+            <button
+              onClick={() =>
+                setQuantity((q) =>
+                  typeof maxSelectableQuantity === 'number' && maxSelectableQuantity > 0
+                    ? Math.min(maxSelectableQuantity, q + 1)
+                    : q + 1
+                )
+              }
+              className="p-3 text-bronze"
+            >
               <Plus className="h-4 w-4" />
             </button>
           </div>
@@ -436,6 +515,37 @@ export function ProductDetailClient({
             <p className="mt-1 text-xs text-[#b14b5d]">Farklı renk seçerek tekrar deneyebilirsiniz.</p>
           </div>
         ) : null}
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            type="button"
+            onClick={handleWhatsAppQuickOrder}
+            disabled={!inStock}
+            className={`rounded-xl px-4 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] transition-colors ${
+              inStock
+                ? 'bg-bronze text-white hover:bg-bronze-dark'
+                : 'cursor-not-allowed bg-bronze/35 text-white/75'
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              {inStock ? 'WhatsApp ile Hızlı Sipariş Ver' : 'Tükendi'}
+            </span>
+          </motion.button>
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            disabled={!inStock}
+            className={`rounded-xl border px-4 py-3.5 text-sm font-semibold uppercase tracking-[0.12em] transition-colors ${
+              inStock
+                ? 'border-bronze text-bronze hover:bg-bronze hover:text-white'
+                : 'cursor-not-allowed border-bronze/20 text-bronze/40'
+            }`}
+          >
+            Hemen Satın Al
+          </button>
+        </div>
 
         <section className="mt-5 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fff9ef] p-5">
           <div className="mb-4 flex items-center justify-between gap-3">

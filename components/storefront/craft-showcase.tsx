@@ -1,27 +1,51 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 
 const craftImages = [
   {
     title: 'Deri Örnekleri',
     description: 'Mükemmelliğe ulaşmış premium tam tahıl deri',
+    handle: 'deri-ornekleri',
   },
   {
     title: 'Cüzdan ve Kartlıklar',
     description: 'Şık ve fonksiyonel tasarımlar',
+    handle: 'cuzdan-kartlik',
   },
   {
     title: 'Taraklar',
     description: 'En ince detaylara gösterilen özen',
+    handle: 'taraklar',
   },
   {
-    title: 'Deniz Kabuğu',
-    description: 'Doğanın mükemmel spirali, ebedi ilham kaynağımız',
+    title: 'Aksesuarlar',
+    description: 'Stili tamamlayan özel dokunuşlar',
+    handle: 'aksesuarlar',
   },
 ]
 
 export function CraftShowcase() {
+  const [imageMap, setImageMap] = useState<Record<string, { imageUrl: string | null; imageAlt: string }>>({})
+
+  useEffect(() => {
+    const loadCraftImages = async () => {
+      try {
+        const response = await fetch('/api/storefront/craft-images', { cache: 'no-store' })
+        if (!response.ok) return
+        const data = (await response.json()) as {
+          craftImages?: Record<string, { imageUrl: string | null; imageAlt: string }>
+        }
+        setImageMap(data.craftImages || {})
+      } catch {
+        setImageMap({})
+      }
+    }
+    loadCraftImages()
+  }, [])
+
   return (
     <section className="overflow-hidden bg-ivory-warm py-20 sm:py-28 lg:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -62,9 +86,28 @@ export function CraftShowcase() {
                 className={`group relative ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}
               >
                 <div className={`relative overflow-hidden bg-ivory ${index === 0 ? 'aspect-square' : 'aspect-[4/5]'}`}>
+                  {imageMap[item.handle]?.imageUrl ? (
+                    <>
+                      <Image
+                        src={imageMap[item.handle].imageUrl as string}
+                        alt={imageMap[item.handle].imageAlt || item.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/15 to-black/10" />
+                    </>
+                  ) : null}
+
                   {/* Placeholder illustration */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-ivory via-ivory-warm to-ivory-dark">
-                    <CraftIllustration index={index} />
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${
+                      imageMap[item.handle]?.imageUrl
+                        ? 'from-ivory/15 via-ivory-warm/20 to-ivory-dark/25'
+                        : 'from-ivory via-ivory-warm to-ivory-dark'
+                    }`}
+                  >
+                    {!imageMap[item.handle]?.imageUrl ? <CraftIllustration index={index} /> : null}
                   </div>
                   
                   {/* Hover overlay */}
@@ -72,10 +115,18 @@ export function CraftShowcase() {
                   
                   {/* Label */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-ivory/90 to-transparent p-4 lg:p-6">
-                    <h3 className="font-serif text-lg text-bronze lg:text-xl">
+                    <h3
+                      className={`font-serif text-lg lg:text-xl ${
+                        imageMap[item.handle]?.imageUrl ? 'text-white' : 'text-bronze'
+                      }`}
+                    >
                       {item.title}
                     </h3>
-                    <p className="mt-1 text-xs text-bronze-light opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <p
+                      className={`mt-1 text-xs opacity-0 transition-opacity duration-300 group-hover:opacity-100 ${
+                        imageMap[item.handle]?.imageUrl ? 'text-ivory/90' : 'text-bronze-light'
+                      }`}
+                    >
                       {item.description}
                     </p>
                   </div>

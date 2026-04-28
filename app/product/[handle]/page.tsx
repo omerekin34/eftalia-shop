@@ -10,6 +10,7 @@ export const revalidate = 0
 
 type PageProps = {
   params: Promise<{ handle: string }>
+  searchParams?: Promise<{ color?: string }>
 }
 
 function parseRating(value: unknown) {
@@ -69,8 +70,9 @@ async function fetchJudgeMeReviewsOnPage(cleanId: string) {
   }
 }
 
-export default async function ProductByHandlePage({ params }: PageProps) {
+export default async function ProductByHandlePage({ params, searchParams }: PageProps) {
   const { handle } = await params
+  const search = (await searchParams) || {}
   const product = await getProduct(handle)
 
   if (!product) {
@@ -163,6 +165,7 @@ export default async function ProductByHandlePage({ params }: PageProps) {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <ProductDetailClient
             product={product}
+            initialColor={typeof search.color === 'string' ? search.color : undefined}
             productSpecs={productSpecs.map((field) => ({
               key: field.key,
               label: prettyMetafieldLabel(field.key),

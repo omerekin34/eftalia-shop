@@ -94,6 +94,9 @@ export function AccountDashboardClient({
 
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard')
   const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isLinkingGoogle, setIsLinkingGoogle] = useState(false)
+  const [googleLinkMessage, setGoogleLinkMessage] = useState('')
+  const [googleLinkError, setGoogleLinkError] = useState('')
   const [profileMessage, setProfileMessage] = useState('')
   const [profileError, setProfileError] = useState('')
   const [addresses, setAddresses] = useState<CustomerAddress[]>(customer.addresses || [])
@@ -132,6 +135,22 @@ export function AccountDashboardClient({
     }
   }, [searchParams, activeTab])
 
+  useEffect(() => {
+    if (activeTab !== 'profile') return
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    if (!clientId) return
+
+    const existing = document.querySelector<HTMLScriptElement>('script[data-google-identity="1"]')
+    if (existing) return
+
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.dataset.googleIdentity = '1'
+    document.head.appendChild(script)
+  }, [activeTab])
+
   const setTab = (tab: TabKey) => {
     setActiveTab(tab)
     const path = tab === 'dashboard' ? '/account' : `/account?tab=${tab}`
@@ -163,6 +182,40 @@ export function AccountDashboardClient({
     } finally {
       setIsSavingProfile(false)
     }
+  }
+
+  const handleLinkGoogle = () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    if (!clientId || !window.google?.accounts?.id) {
+      setGoogleLinkError('Google bağlantısı için yapılandırma eksik görünüyor.')
+      return
+    }
+
+    setGoogleLinkError('')
+    setGoogleLinkMessage('')
+
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: async ({ credential }: { credential: string }) => {
+        setIsLinkingGoogle(true)
+        try {
+          const response = await fetch('/api/auth/google/link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential }),
+          })
+          const data = (await response.json()) as { error?: string }
+          if (!response.ok) throw new Error(data?.error || 'Google hesabı bağlanamadı.')
+          setGoogleLinkMessage('Google hesabınız başarıyla bağlandı. Artık Google ile giriş yapabilirsiniz.')
+        } catch (error) {
+          setGoogleLinkError(error instanceof Error ? error.message : 'Google hesabı bağlanamadı.')
+        } finally {
+          setIsLinkingGoogle(false)
+        }
+      },
+    })
+
+    window.google.accounts.id.prompt()
   }
 
   const resetAddressForm = () => {
@@ -307,6 +360,30 @@ export function AccountDashboardClient({
           {activeTab === 'profile' && (
             <div>
               <h2 className="font-serif text-2xl text-[#4d3523]">Üyelik Bilgilerim</h2>
+              <div className="mt-4 rounded-xl border border-[#9b7a57]/20 bg-white/80 p-4">
+                <p className="text-sm font-medium text-[#4d3523]">Google hesabı bağlantısı</p>
+                <p className="mt-1 text-xs leading-relaxed text-[#7d5f45]">
+                  Hesabınızı Google ile bağladığınızda bir sonraki girişte e-posta/şifre yazmadan devam edebilirsiniz.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleLinkGoogle}
+                  disabled={isLinkingGoogle}
+                  className="mt-3 rounded-lg border border-[#9b7a57]/30 bg-[#fff9ef] px-4 py-2 text-sm font-medium text-[#6d4f35] transition-colors hover:bg-white disabled:opacity-70"
+                >
+                  {isLinkingGoogle ? 'Google bağlantısı kuruluyor...' : 'Google hesabını bağla'}
+                </button>
+                {googleLinkError ? (
+                  <p className="mt-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                    {googleLinkError}
+                  </p>
+                ) : null}
+                {googleLinkMessage ? (
+                  <p className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                    {googleLinkMessage}
+                  </p>
+                ) : null}
+              </div>
               <form onSubmit={handleProfileSubmit} className="mt-5 grid gap-4 sm:grid-cols-2">
                 <input
                   value={profileForm.firstName}

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Loader2, Lock, MapPin, ShieldCheck, Truck } from 'lucide-react'
+import { Loader2, Lock, MapPin, ShieldCheck, Sparkles, Truck } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
 import { useCart } from '@/components/storefront/cart-context'
@@ -22,6 +22,12 @@ type CheckoutSavedAddress = {
   phone?: string
 }
 
+type ShippingPolicySummary = {
+  title?: string
+  url?: string
+  excerpt?: string
+} | null
+
 export default function OdemePage() {
   const { items, totalItems } = useCart()
   const [phase, setPhase] = useState<'idle' | 'redirecting' | 'error'>('idle')
@@ -30,6 +36,7 @@ export default function OdemePage() {
   const [savedAddresses, setSavedAddresses] = useState<CheckoutSavedAddress[]>([])
   const [defaultAddressId, setDefaultAddressId] = useState('')
   const [selectedCustomerAddressId, setSelectedCustomerAddressId] = useState('')
+  const [shippingPolicy, setShippingPolicy] = useState<ShippingPolicySummary>(null)
   const attemptRef = useRef<string | null>(null)
 
   const linesKey = useMemo(
@@ -37,11 +44,10 @@ export default function OdemePage() {
     [items]
   )
 
-  const needsAddressChoice = savedAddresses.length > 1
-
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
   const shipping = subtotal > 1500 || subtotal === 0 ? 0 : 99.9
   const total = subtotal + shipping
+  const needsAddressChoice = savedAddresses.length > 1
 
   useEffect(() => {
     let cancelled = false
@@ -68,6 +74,26 @@ export default function OdemePage() {
         }
       } finally {
         if (!cancelled) setAddressesLoaded(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const response = await fetch('/api/storefront/shipping-policy', { cache: 'no-store' })
+        const data = (await response.json()) as { shippingPolicy?: ShippingPolicySummary }
+        if (!cancelled) {
+          setShippingPolicy(data.shippingPolicy || null)
+        }
+      } catch {
+        if (!cancelled) {
+          setShippingPolicy(null)
+        }
       }
     })()
     return () => {
@@ -206,7 +232,7 @@ export default function OdemePage() {
                             : phase === 'error'
                               ? 'Ödeme bağlantısı kurulamadı'
                               : needsAddressChoice
-                                ? 'Kayıtlı adreslerinizden birini seçin'
+                                ? 'Teslimat adresinizi seçin'
                                 : 'Sepetiniz doğrulanıyor…'}
                       </p>
                       <p className="mt-2 text-sm text-bronze/70">
@@ -217,7 +243,7 @@ export default function OdemePage() {
                             : phase === 'error'
                               ? 'Bağlantıyı yeniden kurmayı veya manuel açmayı deneyebilirsiniz.'
                               : needsAddressChoice
-                                ? 'Shopify Checkout’ta seçtiğiniz adres ön seçili gelir; gerekirse orada düzenleyebilirsiniz.'
+                                ? 'Shopify ödeme ekranında kargo yöntemi ve teslimat seçenekleri gösterilir.'
                                 : 'Otomatik yönlendirme başlatılıyor; lütfen bu ekranda kalın.'}
                       </p>
                     </div>
@@ -274,6 +300,36 @@ export default function OdemePage() {
                     </div>
                   ) : null}
 
+                  {addressesLoaded ? (
+                    <div className="mt-6 rounded-xl border border-[#9b7a57]/20 bg-gradient-to-br from-[#fffdf8] via-white to-[#f8efe1] p-4 text-left shadow-[0_22px_44px_-36px_rgba(83,58,39,0.45)]">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-medium uppercase tracking-wide text-bronze/55">Kargo adımı</p>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-[#9b7a57]/20 bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#6d4f35]">
+                          <Sparkles className="h-3 w-3 text-[#b8956a]" />
+                          Shopify checkout
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm leading-relaxed text-bronze/75">
+                        Kargo yöntemi, ücret ve tahmini teslim süresi resmi Shopify ödeme ekranında seçilir ve kesinleşir.
+                      </p>
+                      {shippingPolicy?.excerpt ? (
+                        <p className="mt-2 rounded-lg border border-bronze/15 bg-white/80 px-3 py-2 text-xs leading-relaxed text-bronze/70">
+                          {shippingPolicy.excerpt}
+                        </p>
+                      ) : null}
+                      {shippingPolicy?.url ? (
+                        <Link
+                          href={shippingPolicy.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-flex text-xs font-medium text-bronze underline-offset-2 hover:underline"
+                        >
+                          {shippingPolicy.title || 'Kargo politikası'} kaynağını görüntüle
+                        </Link>
+                      ) : null}
+                    </div>
+                  ) : null}
+
                   <ul className="mt-6 grid gap-3 text-sm text-bronze/80 sm:grid-cols-3">
                     <li className="flex items-start gap-2 rounded-xl border border-white/60 bg-white/70 px-3 py-3">
                       <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-bronze" />
@@ -295,7 +351,18 @@ export default function OdemePage() {
                     </p>
                   ) : null}
 
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <div className="mt-6 rounded-xl border border-[#9b7a57]/18 bg-white/75 p-3 shadow-[0_18px_40px_-34px_rgba(83,58,39,0.45)]">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                        <ShieldCheck className="h-3 w-3" />
+                        Güvenli ödeme
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full border border-[#9b7a57]/20 bg-[#fff9ef] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#6d4f35]">
+                        <Lock className="h-3 w-3" />
+                        SSL korumalı
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row">
                     {phase === 'error' ? (
                       <button
                         type="button"
@@ -305,17 +372,19 @@ export default function OdemePage() {
                         Tekrar dene
                       </button>
                     ) : null}
-                    {addressesLoaded && needsAddressChoice && phase !== 'error' ? (
+                    {addressesLoaded && phase !== 'error' ? (
                       <button
                         type="button"
                         onClick={() => void confirmAddressAndCheckout()}
-                        disabled={phase === 'redirecting' || !selectedCustomerAddressId}
-                        className="inline-flex flex-1 items-center justify-center rounded-xl bg-bronze px-6 py-3.5 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-bronze-dark disabled:opacity-60"
+                        disabled={
+                          phase === 'redirecting' || (needsAddressChoice && !selectedCustomerAddressId)
+                        }
+                        className="inline-flex flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-[#5B1F2A] via-[#7f2b3b] to-[#5B1F2A] px-6 py-3.5 text-sm font-semibold uppercase tracking-wide text-white shadow-[0_16px_34px_-22px_rgba(91,31,42,0.75)] transition-all hover:brightness-105 hover:shadow-[0_22px_44px_-26px_rgba(91,31,42,0.85)] disabled:opacity-60"
                       >
-                        {phase === 'redirecting' ? 'Yönlendiriliyor…' : 'Seçilen adresle ödemeye geç'}
+                        {phase === 'redirecting' ? 'Yönlendiriliyor…' : 'Güvenli ödeme ekranına geç'}
                       </button>
                     ) : null}
-                    {addressesLoaded && (!needsAddressChoice || phase === 'error') ? (
+                    {addressesLoaded && phase === 'error' ? (
                       <button
                         type="button"
                         onClick={() => void startShopifyCheckout()}
@@ -325,6 +394,7 @@ export default function OdemePage() {
                         {phase === 'redirecting' ? 'Bekleniyor…' : 'Ödeme sayfasını elle aç'}
                       </button>
                     ) : null}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -398,7 +468,9 @@ export default function OdemePage() {
                   </span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-bronze/50">
-                  Kesin kargo, vergi ve indirimler Shopify ödeme adımında hesaplanır.
+                  {shippingPolicy?.excerpt
+                    ? `${shippingPolicy.excerpt} Kesin kargo ücreti ve teslimat seçenekleri Shopify ödeme adımında hesaplanır.`
+                    : 'Kesin kargo ücreti, kargo yöntemi, vergi ve indirimler Shopify ödeme adımında hesaplanır.'}
                 </p>
                 <div className="flex items-center justify-between pt-1 text-base font-semibold text-bronze-dark">
                   <span>Genel toplam (tahmini)</span>

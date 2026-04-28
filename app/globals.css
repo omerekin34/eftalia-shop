@@ -4,15 +4,15 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* B'ETUI EFTELIA Brand Palette */
+  /* EFTALIA CASE Brand Palette */
   /* Warm Ivory/Cream Background - like high-quality art paper */
   --background: oklch(0.97 0.008 85);
   --foreground: oklch(0.35 0.04 55);
   
   /* Antique Bronze/Aged Brass - primary text and structural */
-  --bronze: oklch(0.45 0.08 60);
+  --bronze: oklch(0.41 0.08 60);
   --bronze-light: oklch(0.55 0.1 65);
-  --bronze-dark: oklch(0.35 0.06 55);
+  --bronze-dark: oklch(0.31 0.06 55);
   
   /* Shimmering Golden Bronze - accent */
   --gold: oklch(0.65 0.12 75);

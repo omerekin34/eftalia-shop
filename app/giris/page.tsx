@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -10,6 +10,25 @@ import { Footer } from '@/components/storefront/footer'
 
 type AuthMode = 'login' | 'register'
 
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (args: {
+            client_id: string
+            callback: (response: { credential: string }) => void
+          }) => void
+          renderButton: (
+            parent: HTMLElement,
+            options: Record<string, string | number | boolean>
+          ) => void
+        }
+      }
+    }
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -18,6 +37,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [acceptsPolicies, setAcceptsPolicies] = useState(false)
+  const googleButtonRef = useRef<HTMLDivElement | null>(null)
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -30,9 +51,75 @@ export default function LoginPage() {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
+  useEffect(() => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    if (!clientId) return
+
+    const renderGoogleButton = () => {
+      if (!window.google?.accounts?.id || !googleButtonRef.current) return
+
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async ({ credential }) => {
+          setErrorMessage('')
+          setIsSubmitting(true)
+          try {
+            const response = await fetch('/api/auth/google', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ credential, acceptsPolicies, mode }),
+            })
+            const data = (await response.json()) as { error?: string }
+            if (!response.ok) {
+              throw new Error(data?.error || 'Google ile giriş başarısız oldu.')
+            }
+            router.push('/account')
+            router.refresh()
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Google ile giriş başarısız oldu.'
+            setErrorMessage(message)
+            if (message.toLocaleLowerCase('tr').includes('üye ol sekmesine geç')) {
+              setMode('register')
+            }
+          } finally {
+            setIsSubmitting(false)
+          }
+        },
+      })
+
+      googleButtonRef.current.innerHTML = ''
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+        width: 360,
+      })
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-identity="1"]')
+    if (existingScript) {
+      renderGoogleButton()
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.dataset.googleIdentity = '1'
+    script.onload = renderGoogleButton
+    document.head.appendChild(script)
+  }, [acceptsPolicies, mode, router])
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setErrorMessage('')
+    if (mode === 'register' && !acceptsPolicies) {
+      setErrorMessage('Üyelik için politika metinlerini kabul etmelisiniz.')
+      return
+    }
     setIsSubmitting(true)
 
     try {
@@ -46,6 +133,7 @@ export default function LoginPage() {
               email: form.email,
               password: form.password,
               phone: form.phone,
+              acceptsPolicies,
             }
 
       const response = await fetch(endpoint, {
@@ -93,7 +181,10 @@ export default function LoginPage() {
             >
               <div className="mb-6 flex items-center gap-2 rounded-full border border-bronze/15 p-1">
                 <button
-                  onClick={() => setMode('login')}
+                  onClick={() => {
+                    setMode('login')
+                    setErrorMessage('')
+                  }}
                   className={`flex-1 rounded-full px-4 py-2.5 text-sm font-medium transition-all ${
                     mode === 'login'
                       ? 'bg-bronze text-white'
@@ -103,7 +194,10 @@ export default function LoginPage() {
                   Giriş Yap
                 </button>
                 <button
-                  onClick={() => setMode('register')}
+                  onClick={() => {
+                    setMode('register')
+                    setErrorMessage('')
+                  }}
                   className={`flex-1 rounded-full px-4 py-2.5 text-sm font-medium transition-all ${
                     mode === 'register'
                       ? 'bg-bronze text-white'
@@ -116,13 +210,25 @@ export default function LoginPage() {
 
               <div className="mb-6">
                 <h1 className="font-serif text-3xl text-bronze-dark">
-                  {mode === 'login' ? 'Hesabına Hoş Geldin' : 'Eftelia Ailesine Katıl'}
+                  {mode === 'login' ? 'Hesabına Hoş Geldin' : 'EFTALIA CASE Ailesine Katıl'}
                 </h1>
                 <p className="mt-2 text-sm text-bronze/60">
                   {mode === 'login'
                     ? 'Siparişlerini, favorilerini ve adres bilgilerini kolayca yönet.'
                     : 'Dakikalar içinde hesabını oluştur, özel fırsatları ilk sen yakala.'}
                 </p>
+              </div>
+
+              <div className="mb-5">
+                <div
+                  ref={googleButtonRef}
+                  className="flex min-h-[44px] items-center justify-center rounded-lg border border-bronze/20 bg-white px-2 py-1"
+                />
+                {!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
+                  <p className="mt-2 text-xs text-bronze/60">
+                    Google girişi için NEXT_PUBLIC_GOOGLE_CLIENT_ID değişkenini ekleyin.
+                  </p>
+                ) : null}
               </div>
 
               <form className="space-y-4" onSubmit={handleSubmit}>
@@ -207,6 +313,34 @@ export default function LoginPage() {
                   </div>
                 )}
 
+                {mode === 'register' && (
+                  <div className="space-y-2 rounded-lg border border-bronze/15 bg-ivory-warm/70 p-3">
+                    <label className="flex items-start gap-2 text-sm text-bronze/75">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 accent-bronze"
+                        checked={acceptsPolicies}
+                        onChange={(e) => setAcceptsPolicies(e.target.checked)}
+                        required
+                      />
+                      <span>
+                        <Link href="/gizlilik-politikasi" className="underline underline-offset-2 hover:text-bronze">
+                          Gizlilik Politikası
+                        </Link>
+                        ,{' '}
+                        <Link href="/sartlar" className="underline underline-offset-2 hover:text-bronze">
+                          Şartlar
+                        </Link>{' '}
+                        ve{' '}
+                        <Link href="/iade" className="underline underline-offset-2 hover:text-bronze">
+                          İade Politikası
+                        </Link>{' '}
+                        metinlerini okudum ve kabul ediyorum.
+                      </span>
+                    </label>
+                  </div>
+                )}
+
                 {errorMessage ? (
                   <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                     {errorMessage}
@@ -254,7 +388,7 @@ export default function LoginPage() {
               transition={{ duration: 0.4, delay: 0.08 }}
               className="rounded-2xl border border-bronze/15 bg-ivory-warm p-6 sm:p-8"
             >
-              <h2 className="font-serif text-2xl text-bronze-dark">Neden Eftelia Hesabı?</h2>
+              <h2 className="font-serif text-2xl text-bronze-dark">Neden EFTALIA CASE Hesabı?</h2>
               <p className="mt-3 text-sm leading-relaxed text-bronze/70">
                 Hesabınla sipariş süreçlerini tek ekrandan takip eder, favori ürünlerini kaydeder
                 ve sana özel kampanyalardan ilk sen haberdar olursun.

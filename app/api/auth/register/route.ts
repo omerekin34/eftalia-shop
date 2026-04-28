@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       email?: string
       password?: string
       phone?: string
+      acceptsPolicies?: boolean
     }
 
     const firstName = String(body?.firstName || '').trim()
@@ -45,9 +46,16 @@ export async function POST(request: Request) {
     const password = String(body?.password || '').trim()
     const phone = String(body?.phone || '').trim()
     const normalizedPhone = normalizePhoneForShopify(phone)
+    const acceptsPolicies = Boolean(body?.acceptsPolicies)
 
     if (!firstName || !lastName || !email || !password) {
       return NextResponse.json({ error: 'Ad, soyad, e-posta ve şifre zorunludur.' }, { status: 400 })
+    }
+    if (!acceptsPolicies) {
+      return NextResponse.json(
+        { error: 'Üyelik için Gizlilik Politikası, Şartlar ve İade Politikası onayı gereklidir.' },
+        { status: 400 }
+      )
     }
 
     await customerCreate({

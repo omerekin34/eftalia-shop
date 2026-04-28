@@ -18,6 +18,12 @@ export async function getCollections(first = 50) {
           id: string
           title: string
           handle: string
+          image?: {
+            url: string
+            altText: string | null
+            width: number | null
+            height: number | null
+          } | null
         }
       }>
     }

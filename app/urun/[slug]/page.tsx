@@ -5,7 +5,21 @@ import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Minus, Plus, ChevronLeft, ChevronRight, Share2, Truck, RefreshCw, Shield, Check, Star } from 'lucide-react'
+import {
+  Heart,
+  Minus,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Share2,
+  Truck,
+  RefreshCw,
+  Shield,
+  Check,
+  Star,
+  LockKeyhole,
+  CircleCheck,
+} from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
 import { useCart } from '@/components/storefront/cart-context'
@@ -394,11 +408,12 @@ export default function ProductDetailPage() {
     {
       id: 'odeme-guvenligi',
       title: 'Ödeme Güvencesi',
-      content: 'Ödeme işlemleriniz güvenli altyapı üzerinden gerçekleştirilir. Kart bilgileriniz sistemlerimizde saklanmaz.',
+      content:
+        'Ödeme adımında Shopify altyapısına yönlendirilirsiniz. Kart bilgileriniz Shopify tarafından güvenli ödeme sayfasında işlenir ve EFTALIA CASE sistemlerinde saklanmaz.',
     },
     {
-      id: 'eftelia-dokunusu',
-      title: 'Eftelia Dokunuşu',
+      id: 'eftalia-case-dokunusu',
+      title: 'EFTALIA CASE Dokunuşu',
       content: 'Her parça, usta ellerde özenle tamamlanır ve kalite kontrol sonrası paketlenir. Zamansız kullanım için dayanıklı malzemeler tercih edilir.',
     },
   ]
@@ -679,6 +694,31 @@ export default function ProductDetailPage() {
               <button className="mt-3 w-full border border-bronze py-4 text-sm font-medium uppercase tracking-wider text-bronze transition-colors hover:bg-bronze hover:text-white">
                 Hemen Satın Al
               </button>
+
+              <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-white p-2 text-emerald-700">
+                    <LockKeyhole className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-900">Shopify Güvenli Ödeme</p>
+                    <p className="mt-1 text-sm leading-relaxed text-emerald-900/85">
+                      Ödeme sırasında Shopify&apos;ın güvenli ödeme ekranına yönlendirilirsiniz. Kart
+                      bilgileriniz EFTALIA CASE tarafında tutulmaz.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-2 text-xs text-emerald-900/85 sm:grid-cols-2">
+                  <div className="flex items-center gap-2">
+                    <CircleCheck className="h-3.5 w-3.5" />
+                    <span>Ödeme verileri Shopify altyapısında işlenir</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CircleCheck className="h-3.5 w-3.5" />
+                    <span>Sipariş sonrası destek ve takip hesabında görünür</span>
+                  </div>
+                </div>
+              </div>
 
               {/* Features */}
               <div className="mt-10 grid grid-cols-3 gap-4 border-t border-bronze/10 pt-8">

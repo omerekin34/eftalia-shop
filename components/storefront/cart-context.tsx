@@ -9,6 +9,7 @@ export interface CartItem {
   price: number
   image?: string
   color?: string
+  maxQuantity?: number
   quantity: number
 }
 
@@ -55,14 +56,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (existingIndex > -1) {
         const updated = [...prev]
+        const requested = updated[existingIndex].quantity + quantity
+        const maxAllowed =
+          typeof item.maxQuantity === 'number' && item.maxQuantity > 0
+            ? item.maxQuantity
+            : updated[existingIndex].maxQuantity
         updated[existingIndex] = {
           ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + quantity,
+          maxQuantity: maxAllowed,
+          quantity:
+            typeof maxAllowed === 'number' && maxAllowed > 0
+              ? Math.min(requested, maxAllowed)
+              : requested,
         }
         return updated
       }
 
-      return [...prev, { ...item, quantity }]
+      const safeQuantity =
+        typeof item.maxQuantity === 'number' && item.maxQuantity > 0
+          ? Math.min(quantity, item.maxQuantity)
+          : quantity
+      return [...prev, { ...item, quantity: safeQuantity }]
     })
   }
 
@@ -79,11 +93,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   ) => {
     setItems((prev) =>
       prev
-        .map((entry) =>
-          entry.id === itemId && entry.color === color
-            ? { ...entry, quantity }
-            : entry
-        )
+        .map((entry) => {
+          if (!(entry.id === itemId && entry.color === color)) return entry
+          const maxAllowed =
+            typeof entry.maxQuantity === 'number' && entry.maxQuantity > 0
+              ? entry.maxQuantity
+              : undefined
+          return {
+            ...entry,
+            quantity:
+              typeof maxAllowed === 'number'
+                ? Math.min(quantity, maxAllowed)
+                : quantity,
+          }
+        })
         .filter((entry) => entry.quantity > 0)
     )
   }
