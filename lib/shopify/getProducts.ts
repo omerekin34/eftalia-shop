@@ -15,6 +15,7 @@ export interface ProductCardModel {
   isBestseller?: boolean
   inStock: boolean
   stockQuantity?: number
+  colorStockByName?: Record<string, number>
 }
 
 type ShopifyProductNode = {
@@ -56,6 +57,7 @@ type NormalizedApiProduct = {
   isBestseller?: boolean
   inStock?: boolean
   stockQuantity?: number
+  colorStockByName?: Record<string, number>
 }
 
 const colorHexMap: Record<string, string> = {
@@ -146,6 +148,17 @@ function toProductCardModel(node: ShopifyProductNode): ProductCardModel {
     const qty = Number(variant?.quantityAvailable ?? 0)
     return sum + (Number.isFinite(qty) && qty > 0 ? qty : 0)
   }, 0)
+  const colorStockByName = variants.reduce<Record<string, number>>((acc, variant) => {
+    if (!variant?.availableForSale) return acc
+    const qty = Number(variant?.quantityAvailable ?? 0)
+    if (!Number.isFinite(qty) || qty <= 0) return acc
+    const colorOption = (variant?.selectedOptions || []).find((option) =>
+      ['color', 'renk'].includes((option.name || '').toLocaleLowerCase('tr'))
+    )
+    const colorName = String(colorOption?.value || 'Standart').trim() || 'Standart'
+    acc[colorName] = (acc[colorName] || 0) + qty
+    return acc
+  }, {})
 
   const galleryImages = (node.images?.edges || [])
     .map((edge) => edge.node?.url)
@@ -178,6 +191,7 @@ function toProductCardModel(node: ShopifyProductNode): ProductCardModel {
     ),
     inStock,
     stockQuantity,
+    colorStockByName,
   }
 }
 
@@ -213,6 +227,7 @@ function normalizeApiProduct(product: NormalizedApiProduct): ProductCardModel {
     isBestseller: Boolean(product.isBestseller),
     inStock: product.inStock !== false,
     stockQuantity: Number(product.stockQuantity || 0),
+    colorStockByName: product.colorStockByName || {},
   }
 }
 

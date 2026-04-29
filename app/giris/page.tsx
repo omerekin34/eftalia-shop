@@ -210,7 +210,7 @@ export default function LoginPage() {
 
               <div className="mb-6">
                 <h1 className="font-serif text-3xl text-bronze-dark">
-                  {mode === 'login' ? 'Hesabına Hoş Geldin' : 'EFTALIA CASE Ailesine Katıl'}
+                  {mode === 'login' ? 'Hesabına Hoş Geldin' : 'EFTALIA Ailesine Katıl'}
                 </h1>
                 <p className="mt-2 text-sm text-bronze/60">
                   {mode === 'login'
@@ -222,7 +222,7 @@ export default function LoginPage() {
               <div className="mb-5">
                 <div
                   ref={googleButtonRef}
-                  className="flex min-h-[44px] items-center justify-center rounded-lg border border-bronze/20 bg-white px-2 py-1"
+                  className="flex min-h-[44px] items-center justify-center"
                 />
                 {!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
                   <p className="mt-2 text-xs text-bronze/60">
@@ -388,7 +388,7 @@ export default function LoginPage() {
               transition={{ duration: 0.4, delay: 0.08 }}
               className="rounded-2xl border border-bronze/15 bg-ivory-warm p-6 sm:p-8"
             >
-              <h2 className="font-serif text-2xl text-bronze-dark">Neden EFTALIA CASE Hesabı?</h2>
+              <h2 className="font-serif text-2xl text-bronze-dark">Neden EFTALIA Hesabı?</h2>
               <p className="mt-3 text-sm leading-relaxed text-bronze/70">
                 Hesabınla sipariş süreçlerini tek ekrandan takip eder, favori ürünlerini kaydeder
                 ve sana özel kampanyalardan ilk sen haberdar olursun.

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 
 const marqueeItems = [
   'EL YAPIMI DERİ ÜRÜNLER',
-  'EFTALIA CASE',
+  'EFTALIA',
   'KÜRESEL LÜKS',
   'USTA ELLERİNDEN',
   'ZAMANSIZ ZARAFET',

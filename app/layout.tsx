@@ -4,6 +4,8 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { CartProvider } from '@/components/storefront/cart-context'
 import { FavoritesProvider } from '@/components/storefront/favorites-context'
+import { SupportFab } from '@/components/storefront/support-fab'
+import { SpinWheelLauncher } from '@/components/storefront/spin-wheel-launcher'
 
 const playfair = Playfair_Display({ 
   subsets: ["latin"],
@@ -18,13 +20,13 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'EFTALIA CASE | Luxury Leather Goods',
+  title: 'EFTALIA | Luxury Leather Goods',
   description:
     'Detayın sanatını keşfedin. El yapımı deri ürünlerde küresel standartlar. Premium deri defter kılıfları, çantalar ve aksesuarlar.',
   keywords: ['luxury leather', 'handcrafted', 'leather goods', 'handbags', 'journal covers', 'artisan'],
   generator: 'v0.app',
   openGraph: {
-    title: 'EFTALIA CASE | Luxury Leather Goods',
+    title: 'EFTALIA | Luxury Leather Goods',
     description: 'Detayın sanatını keşfedin. El yapımı deri ürünlerde küresel standartlar.',
     type: 'website',
   },
@@ -60,7 +62,11 @@ export default function RootLayout({
     <html lang="tr" className={`${playfair.variable} ${inter.variable} bg-background`}>
       <body className="font-sans antialiased">
         <FavoritesProvider>
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>
+            {children}
+            <SupportFab />
+            <SpinWheelLauncher />
+          </CartProvider>
         </FavoritesProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

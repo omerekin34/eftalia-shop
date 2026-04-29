@@ -41,8 +41,6 @@ function cleanShopifyProductId(productId: string) {
 async function fetchJudgeMeReviewsOnPage(cleanId: string) {
   if (!cleanId) return []
 
-  console.log('KULLANILAN TOKEN:', process.env.JUDGEME_PRIVATE_TOKEN)
-
   const fetchUrl = `https://judge.me/api/v1/reviews?shop_domain=nwjti9-bw.myshopify.com&api_token=${process.env.JUDGEME_PRIVATE_TOKEN || process.env.JUDGEME_API_TOKEN}&external_id=${cleanId}`
 
   try {
@@ -116,14 +114,6 @@ export default async function ProductByHandlePage({ params, searchParams }: Page
   const reviewRatingCount = reviews.length > 0 ? reviews.length : Number(product.reviewRatingCount || 0)
   const hasValidRating = Number.isFinite(reviewRating) && reviewRating > 0
   const isRatingPending = !hasValidRating && reviewRatingCount > 0
-
-  console.log('[ProductPage][reviewData]', {
-    handle,
-    reviewRating: product.reviewRating ?? null,
-    parsedReviewRating: Number.isFinite(reviewRating) ? reviewRating : null,
-    reviewRatingCount,
-    reviewsCount: reviews.length,
-  })
 
   const formatReviewDate = (value: string) => {
     if (!value) return '-'

@@ -27,6 +27,7 @@ interface Product {
   isBestseller?: boolean
   inStock?: boolean
   stockQuantity?: number
+  colorStockByName?: Record<string, number>
 }
 
 interface ProductCardProps {
@@ -58,7 +59,14 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
     : 0
   const lowStockCount =
     product.inStock === false ? 0 : Math.max(0, Number(product.stockQuantity || 0))
-  const isLowStock = lowStockCount > 0 && lowStockCount <= 3
+  const isLowStock = lowStockCount > 0 && lowStockCount <= 10
+  const selectedColorStock = Math.max(
+    0,
+    Number(product.colorStockByName?.[selectedColor?.name || ''] || 0)
+  )
+  const lowStockColors = Object.entries(product.colorStockByName || {})
+    .filter(([, qty]) => Number(qty) > 0 && Number(qty) <= 10)
+    .sort((a, b) => Number(a[1]) - Number(b[1]))
 
   return (
     <motion.article
@@ -157,7 +165,7 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
                   e.preventDefault()
                   setSelectedColor(color)
                 }}
-                className={`h-4 w-4 rounded-full border transition-transform hover:scale-110 sm:h-5 sm:w-5 ${
+                className={`relative h-4 w-4 rounded-full border transition-transform hover:scale-110 sm:h-5 sm:w-5 ${
                   selectedColor.name === color.name 
                     ? 'border-bronze ring-1 ring-bronze ring-offset-1' 
                     : 'border-bronze/20'
@@ -165,7 +173,14 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
                 style={{ backgroundColor: color.hex }}
                 title={color.name}
                 aria-label={`${color.name} rengi seç`}
-              />
+              >
+                {Number(product.colorStockByName?.[color.name] || 0) > 0 &&
+                Number(product.colorStockByName?.[color.name] || 0) <= 10 ? (
+                  <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#7B1E2B] px-1 text-[9px] font-semibold leading-none text-white">
+                    {Number(product.colorStockByName?.[color.name] || 0)}
+                  </span>
+                ) : null}
+              </button>
             ))}
             {extraColors > 0 && (
               <span className="ml-0.5 text-[10px] text-bronze/60 sm:text-xs">
@@ -204,8 +219,19 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
           </span>
         </div>
         <p className={`text-xs font-medium ${product.inStock === false ? 'text-[#c41e3a]' : isLowStock ? 'text-[#7B1E2B]' : 'text-bronze/55'}`}>
-          {product.inStock === false ? 'Tükendi' : isLowStock ? `Son ${lowStockCount} ürün` : 'Stokta'}
+          {product.inStock === false
+            ? 'Tükendi'
+            : selectedColorStock > 0
+              ? `${selectedColor.name}: Son ${selectedColorStock} ürün`
+              : isLowStock
+                ? `Son ${lowStockCount} ürün`
+                : 'Stokta'}
         </p>
+        {lowStockColors.length > 0 ? (
+          <p className="line-clamp-2 text-[11px] text-bronze/70">
+            Renk stokları: {lowStockColors.map(([name, qty]) => `${name} (${qty})`).join(' • ')}
+          </p>
+        ) : null}
       </div>
     </motion.article>
   )

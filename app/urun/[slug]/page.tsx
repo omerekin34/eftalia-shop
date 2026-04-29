@@ -409,11 +409,11 @@ export default function ProductDetailPage() {
       id: 'odeme-guvenligi',
       title: 'Ödeme Güvencesi',
       content:
-        'Ödeme adımında Shopify altyapısına yönlendirilirsiniz. Kart bilgileriniz Shopify tarafından güvenli ödeme sayfasında işlenir ve EFTALIA CASE sistemlerinde saklanmaz.',
+        'Ödeme adımında Shopify altyapısına yönlendirilirsiniz. Kart bilgileriniz Shopify tarafından güvenli ödeme sayfasında işlenir ve EFTALIA sistemlerinde saklanmaz.',
     },
     {
       id: 'eftalia-case-dokunusu',
-      title: 'EFTALIA CASE Dokunuşu',
+      title: 'EFTALIA Dokunuşu',
       content: 'Her parça, usta ellerde özenle tamamlanır ve kalite kontrol sonrası paketlenir. Zamansız kullanım için dayanıklı malzemeler tercih edilir.',
     },
   ]
@@ -704,7 +704,7 @@ export default function ProductDetailPage() {
                     <p className="text-sm font-semibold text-emerald-900">Shopify Güvenli Ödeme</p>
                     <p className="mt-1 text-sm leading-relaxed text-emerald-900/85">
                       Ödeme sırasında Shopify&apos;ın güvenli ödeme ekranına yönlendirilirsiniz. Kart
-                      bilgileriniz EFTALIA CASE tarafında tutulmaz.
+                      bilgileriniz EFTALIA tarafında tutulmaz.
                     </p>
                   </div>
                 </div>

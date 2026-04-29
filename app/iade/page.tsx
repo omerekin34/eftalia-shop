@@ -2,16 +2,9 @@ import Link from 'next/link'
 import { RefreshCw, ShieldCheck, CalendarClock, ClipboardCheck } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
-import { getShopRefundPolicy } from '@/lib/shopify'
 
 export default async function IadePage() {
-  const refundPolicy = await getShopRefundPolicy().catch(() => null)
-  const hasPolicy = Boolean(refundPolicy?.body)
-  const normalizedTitle = (refundPolicy?.title || '').trim().toLowerCase()
-  const policyTitle =
-    !refundPolicy?.title || normalizedTitle === 'refund policy'
-      ? 'İade ve Değişim Politikası'
-      : refundPolicy.title
+  const supportEmail = 'eftalia.case.destek@gmail.com'
 
   return (
     <main className="min-h-screen bg-ivory">
@@ -21,7 +14,7 @@ export default async function IadePage() {
           <p className="text-xs tracking-[0.25em] text-bronze/70">DESTEK</p>
           <h1 className="mt-3 font-serif text-4xl text-bronze">İade ve Değişim</h1>
           <p className="mt-4 max-w-3xl text-sm text-bronze/75 sm:text-base">
-            Bu sayfadaki bilgiler Shopify tarafındaki iade ve değişim politikanızdan otomatik olarak çekilir.
+            İade süreçlerinizi aşağıdaki şartlara göre hızlıca başlatabilirsiniz.
           </p>
         </div>
       </section>
@@ -29,31 +22,102 @@ export default async function IadePage() {
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-bronze/15 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-serif text-2xl text-bronze-dark sm:text-3xl">{policyTitle}</h2>
-            {refundPolicy?.url ? (
-              <Link
-                href={refundPolicy.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center rounded-lg border border-bronze/15 bg-white/70 px-3 py-2 text-xs font-medium uppercase tracking-wide text-bronze/75 transition-colors hover:bg-white hover:text-bronze"
-              >
-                Shopify kaynağı
-              </Link>
-            ) : null}
+            <h2 className="font-serif text-2xl text-bronze-dark sm:text-3xl">İade Politikası</h2>
           </div>
 
-          {hasPolicy ? (
-            <article
-              className="prose prose-sm mt-6 max-w-none prose-headings:font-serif prose-headings:text-bronze-dark prose-p:text-bronze/80 prose-li:text-bronze/80 prose-strong:text-bronze-dark"
-              dangerouslySetInnerHTML={{ __html: refundPolicy?.body || '' }}
-            />
-          ) : (
-            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              Shopify içinde henüz bir iade politikası metni bulunamadı. Admin panelinde{' '}
-              <strong>Settings &gt; Policies &gt; Refund policy</strong> alanını doldurduğunuzda bu sayfa otomatik
-              güncellenir.
+          <article className="mt-6 space-y-6 text-sm leading-relaxed text-bronze/80 sm:text-base">
+            <div>
+              <p>
+                Ürününüzü teslim aldıktan sonra <strong>30 gün</strong> içinde iade talebinde bulunabilirsiniz.
+              </p>
             </div>
-          )}
+
+            <div>
+              <p className="font-medium text-bronze-dark">İade edebilmeniz için ürünün:</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                <li>kullanılmamış ve giyilmemiş olması,</li>
+                <li>etiketli olması,</li>
+                <li>orijinal ambalajında bulunması,</li>
+                <li>satın alma belgesi/makbuz ile birlikte gönderilmesi gerekir.</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <p>
+                İade başlatmak için bizimle şu e-posta adresinden iletişime geçebilirsiniz:{' '}
+                <a className="underline underline-offset-2" href={`mailto:${supportEmail}`}>
+                  {supportEmail}
+                </a>
+              </p>
+              <p>İade adresi: [İADE ADRESİNİ GİRİN]</p>
+              <p>
+                İadeniz onaylandığında size iade kargo etiketi ve gönderim talimatları iletilir. Önceden iade talebi
+                oluşturulmadan gönderilen ürünler kabul edilmez.
+              </p>
+              <p>
+                İadelerle ilgili tüm sorularınız için:{' '}
+                <a className="underline underline-offset-2" href={`mailto:${supportEmail}`}>
+                  {supportEmail}
+                </a>
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-serif text-xl text-bronze-dark">Hasarlar ve Sorunlar</h3>
+              <p className="mt-2">
+                Siparişinizi teslim aldığınızda lütfen kontrol ediniz. Ürün kusurlu, hasarlı veya yanlış geldiyse en
+                kısa sürede bizimle iletişime geçin; durumu değerlendirip gerekli çözümü sağlayalım.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-serif text-xl text-bronze-dark">İstisnalar / İade Edilemeyen Ürünler</h3>
+              <p className="mt-2">Aşağıdaki ürünlerde iade kabul edilmez:</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                <li>Bozulabilir ürünler (ör. yiyecek, çiçek, bitki)</li>
+                <li>Özel üretim / kişiselleştirilmiş ürünler</li>
+                <li>Kişisel bakım ürünleri (ör. güzellik ürünleri)</li>
+                <li>Tehlikeli maddeler, yanıcı sıvılar veya gazlar</li>
+                <li>İndirimli ürünler</li>
+                <li>Hediye kartları</li>
+              </ul>
+              <p className="mt-2">Belirli bir ürün için emin değilseniz bizimle iletişime geçebilirsiniz.</p>
+            </div>
+
+            <div>
+              <h3 className="font-serif text-xl text-bronze-dark">Değişim</h3>
+              <p className="mt-2">
+                Değişim için en hızlı yöntem, mevcut ürünü iade edip iade onayından sonra yeni ürün için ayrı sipariş
+                oluşturmaktır.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-serif text-xl text-bronze-dark">Avrupa Birliği İçin 14 Günlük Cayma Hakkı</h3>
+              <p className="mt-2">
+                Avrupa Birliği’ne gönderilen siparişlerde, ürünü teslim aldıktan sonra <strong>14 gün</strong> içinde
+                herhangi bir gerekçe göstermeden iptal veya iade talep edebilirsiniz. Ürün, kullanılmamış, etiketli,
+                orijinal ambalajında ve satın alma belgesi ile birlikte olmalıdır.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-serif text-xl text-bronze-dark">Para İadesi</h3>
+              <p className="mt-2">
+                İade ürününüz tarafımıza ulaşıp incelendikten sonra, iadenizin onay durumu size bildirilir. Onaylanan
+                iadelerde ücret, <strong>10 iş günü</strong> içinde orijinal ödeme yöntemine otomatik olarak iade
+                edilir.
+              </p>
+              <p className="mt-2">
+                Bankanızın veya kart sağlayıcınızın işlem süresi ek zaman alabilir. İade onayından sonra{' '}
+                <strong>15 iş günü</strong> geçtiği halde ücret hesabınıza yansımadıysa lütfen bizimle iletişime
+                geçin:{' '}
+                <a className="underline underline-offset-2" href={`mailto:${supportEmail}`}>
+                  {supportEmail}
+                </a>
+              </p>
+            </div>
+          </article>
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -75,7 +139,8 @@ export default async function IadePage() {
           <div className="mb-2 flex items-center gap-2 text-bronze">
             <ShieldCheck className="h-4 w-4" /> Güvenli süreç
           </div>
-          İade sürecinde tüm bilgi akışı kayıt altındadır. İhtiyaç durumunda destek ekibimiz sürecin her adımında yanınızdadır.
+          İade sürecinde tüm bilgi akışı kayıt altındadır. İhtiyaç durumunda destek ekibimiz sürecin her adımında
+          yanınızdadır.
         </div>
       </section>
       <Footer />

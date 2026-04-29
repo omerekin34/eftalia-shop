@@ -153,6 +153,19 @@ export function ProductDetailClient({
       ) || product.variants[0]
     )
   }, [product.variants, selectedColor])
+  const colorStockByName = useMemo(() => {
+    return product.variants.reduce<Record<string, number>>((acc, variant) => {
+      if (!variant.availableForSale) return acc
+      const qty = Number(variant.quantityAvailable || 0)
+      if (!Number.isFinite(qty) || qty <= 0) return acc
+      const colorOptionValue = variant.selectedOptions.find((option) =>
+        ['renk', 'color'].includes((option.name || '').toLocaleLowerCase('tr'))
+      )?.value
+      const colorName = String(colorOptionValue || 'Standart').trim() || 'Standart'
+      acc[colorName] = (acc[colorName] || 0) + qty
+      return acc
+    }, {})
+  }, [product.variants])
 
   const galleryImages = useMemo(() => {
     const variantImage = selectedVariant?.image
@@ -445,12 +458,18 @@ export function ProductDetailClient({
           <div className="mt-10 rounded-2xl border border-bronze/10 bg-white/70 p-6">
             <div className="mb-4 flex items-center justify-between">
               <span className="text-sm font-medium uppercase tracking-[0.16em] text-bronze/70">Renk</span>
-              <span className="text-sm text-bronze/60">{selectedColor || 'Seçiniz'}</span>
+              <span className="text-sm text-bronze/60">
+                {selectedColor || 'Seçiniz'}
+                {selectedColor && Number(colorStockByName[selectedColor] || 0) > 0
+                  ? ` • Son ${Number(colorStockByName[selectedColor] || 0)}`
+                  : ''}
+              </span>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {colorValues.map((color) => {
                 const isActive = selectedColor === color
                 const hex = colorHexMap[(color || '').toLocaleLowerCase('tr')] || '#D4C4A8'
+                const colorStock = Number(colorStockByName[color] || 0)
                 return (
                   <button
                     key={color}
@@ -463,6 +482,11 @@ export function ProductDetailClient({
                     style={{ backgroundColor: hex }}
                   >
                     <span className={`absolute inset-0 rounded-full ${isActive ? 'ring-2 ring-bronze/25 ring-offset-2' : ''}`} />
+                    {colorStock > 0 && colorStock <= 10 ? (
+                      <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#7B1E2B] px-1 text-[10px] font-semibold leading-none text-white">
+                        {colorStock}
+                      </span>
+                    ) : null}
                     <span
                       className={`absolute -bottom-7 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-full border border-bronze/15 bg-white px-2 py-1 text-[10px] text-bronze/80 shadow-sm ${
                         isActive ? 'block' : 'group-hover:block'
@@ -499,7 +523,7 @@ export function ProductDetailClient({
           </div>
         </div>
 
-        {selectedVariant && inStock && selectedVariant.quantityAvailable > 0 && selectedVariant.quantityAvailable <= 3 ? (
+        {selectedVariant && inStock && selectedVariant.quantityAvailable > 0 && selectedVariant.quantityAvailable <= 10 ? (
           <div className="mt-4 rounded-xl border border-[#7B1E2B]/30 bg-gradient-to-r from-[#fff1f3] to-[#ffe7eb] px-4 py-3 shadow-[0_10px_22px_-16px_rgba(123,30,43,0.65)]">
             <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[#7B1E2B]">
               Son {selectedVariant.quantityAvailable} ürün kaldı

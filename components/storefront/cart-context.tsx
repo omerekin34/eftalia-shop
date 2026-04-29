@@ -19,6 +19,7 @@ interface CartContextValue {
   addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void
   removeItem: (itemId: string, color?: string) => void
   updateItemQuantity: (itemId: string, color: string | undefined, quantity: number) => void
+  clearCart: () => void
   /** Sepet yan paneli açık mı (mobil sticky bar vb. ile çakışmayı önlemek için). */
   isDrawerOpen: boolean
   setDrawerOpen: (open: boolean) => void
@@ -111,6 +112,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     )
   }
 
+  const clearCart = () => {
+    setItems([])
+  }
+
   const totalItems = useMemo(
     () => items.reduce((acc, item) => acc + item.quantity, 0),
     [items]
@@ -124,6 +129,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         addItem,
         removeItem,
         updateItemQuantity,
+        clearCart,
         isDrawerOpen,
         setDrawerOpen,
       }}

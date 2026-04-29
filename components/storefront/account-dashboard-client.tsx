@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Heart, MapPin, Package, Star, User, UserCog } from 'lucide-react'
+import { Copy, Heart, MapPin, Package, Star, TicketPercent, User, UserCog } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AccountSidebar, type AccountNavTabKey } from '@/components/storefront/account-sidebar'
 import { TurkiyeIlIlceFields } from '@/components/storefront/turkiye-il-ilce-fields'
@@ -24,14 +24,17 @@ type CustomerAddress = {
 }
 
 type CustomerDetails = {
+  id?: string
   firstName?: string
   lastName?: string
   email?: string
   phone?: string
   addresses?: CustomerAddress[]
+  spinWheelRewardRaw?: string
 }
 
 type TabKey = AccountNavTabKey
+type SpinRewardEntry = { code: string; label: string; usedAt?: string; spinIndex?: number }
 
 const dashboardCards: Array<{
   key: Exclude<TabKey, 'dashboard'> | 'reviews'
@@ -76,6 +79,7 @@ const dashboardCards: Array<{
 function getTabFromParam(value: string | null): TabKey {
   if (value === 'orders') return 'orders'
   if (value === 'favorites') return 'favorites'
+  if (value === 'coupons') return 'coupons'
   if (value === 'addresses') return 'addresses'
   if (value === 'profile') return 'profile'
   return 'dashboard'
@@ -111,6 +115,56 @@ export function AccountDashboardClient({
     phone: customer.phone || '',
     password: '',
   })
+  const [spinState, setSpinState] = useState<{
+    rewards: SpinRewardEntry[]
+    totalSpend: number
+    availableSpins: number
+    usedSpins: number
+    remainingSpins: number
+    message: string
+  }>(() => {
+    if (!customer.spinWheelRewardRaw) {
+      return { rewards: [], totalSpend: 0, availableSpins: 0, usedSpins: 0, remainingSpins: 0, message: '' }
+    }
+    try {
+      const parsed = JSON.parse(customer.spinWheelRewardRaw) as
+        | { rewards?: SpinRewardEntry[] }
+        | { code?: string; label?: string }
+      const rewards = Array.isArray((parsed as { rewards?: SpinRewardEntry[] })?.rewards)
+        ? ((parsed as { rewards?: SpinRewardEntry[] }).rewards || []).filter((reward) => reward?.code)
+        : []
+      if (rewards.length) {
+        return {
+          rewards,
+          totalSpend: 0,
+          availableSpins: rewards.length,
+          usedSpins: rewards.length,
+          remainingSpins: 0,
+          message: 'Çarkıfelek haklarınızı kullandınız.',
+        }
+      }
+      if (!(parsed as { code?: string })?.code) {
+        return { rewards: [], totalSpend: 0, availableSpins: 0, usedSpins: 0, remainingSpins: 0, message: '' }
+      }
+      return {
+        rewards: [
+          {
+            code: String((parsed as { code?: string }).code || ''),
+            label: String((parsed as { label?: string }).label || 'Ödül Kuponu'),
+            spinIndex: 1,
+          },
+        ],
+        totalSpend: 0,
+        availableSpins: 1,
+        usedSpins: 1,
+        remainingSpins: 0,
+        message: 'Çarkıfelek hakkınızı daha önce kullandınız.',
+      }
+    } catch {
+      return { rewards: [], totalSpend: 0, availableSpins: 0, usedSpins: 0, remainingSpins: 0, message: '' }
+    }
+  })
+  const [couponMessage, setCouponMessage] = useState('')
   const [addressForm, setAddressForm] = useState({
     firstName: '',
     lastName: '',
@@ -150,6 +204,43 @@ export function AccountDashboardClient({
     script.dataset.googleIdentity = '1'
     document.head.appendChild(script)
   }, [activeTab])
+
+  useEffect(() => {
+    let active = true
+    const syncSpinStatus = async () => {
+      try {
+        const response = await fetch('/api/account/spin-wheel', { cache: 'no-store' })
+        const data = (await response.json()) as {
+          rewardsWon?: SpinRewardEntry[]
+          totalSpend?: number
+          availableSpins?: number
+          usedSpins?: number
+          remainingSpins?: number
+        }
+        if (!active || !response.ok) return
+        const rewardsWon = Array.isArray(data.rewardsWon) ? data.rewardsWon.filter((reward) => reward?.code) : []
+        setSpinState((prev) => ({
+          ...prev,
+          rewards: rewardsWon.length ? rewardsWon : prev.rewards,
+          totalSpend: typeof data.totalSpend === 'number' ? data.totalSpend : prev.totalSpend,
+          availableSpins: typeof data.availableSpins === 'number' ? data.availableSpins : prev.availableSpins,
+          usedSpins: typeof data.usedSpins === 'number' ? data.usedSpins : prev.usedSpins,
+          remainingSpins: typeof data.remainingSpins === 'number' ? data.remainingSpins : prev.remainingSpins,
+        }))
+      } catch {
+        // no-op
+      }
+    }
+    const handleSpinUpdated = () => {
+      void syncSpinStatus()
+    }
+    void syncSpinStatus()
+    window.addEventListener('eftalia:spin-wheel-updated', handleSpinUpdated)
+    return () => {
+      active = false
+      window.removeEventListener('eftalia:spin-wheel-updated', handleSpinUpdated)
+    }
+  }, [])
 
   const setTab = (tab: TabKey) => {
     setActiveTab(tab)
@@ -303,6 +394,21 @@ export function AccountDashboardClient({
     }
   }
 
+  const handleOpenSpinWheel = () => {
+    window.dispatchEvent(new CustomEvent('eftalia:open-spin-wheel'))
+  }
+
+  const handleCopyCoupon = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code)
+      setCouponMessage(`${code} panoya kopyalandı.`)
+    } catch {
+      setCouponMessage('Kopyalama başarısız. Kodu manuel olarak kopyalayabilirsiniz.')
+    }
+  }
+
+  const spendForReward = Math.max(0, 5000 - spinState.totalSpend)
+
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div className="mb-8 rounded-2xl border border-[#9b7a57]/25 bg-[#fdf8f0] p-6 shadow-[0_20px_60px_-40px_rgba(83,58,39,0.45)]">
@@ -318,6 +424,46 @@ export function AccountDashboardClient({
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               <h2 className="font-serif text-2xl text-[#4d3523]">Hesabım</h2>
+              <div className="rounded-2xl border border-[#9b7a57]/25 bg-white/80 p-5">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8a6b4b]">Şans Çarkı</p>
+                <h3 className="mt-2 text-lg font-semibold text-[#4d3523]">
+                  5.000 TL üzeri alışverişte tek seferlik çark hakkı
+                </h3>
+                <p className="mt-2 text-sm text-[#7d5f45]">
+                  Kullanıcı başına sadece 1 kez kullanılabilir.
+                </p>
+                <div className="mt-3 rounded-lg border border-[#9b7a57]/20 bg-[#f8efe1] px-3 py-2 text-sm text-[#6d4f35]">
+                  Durum:{' '}
+                  <strong>{spinState.remainingSpins > 0 ? 'Kullanılabilir' : spinState.usedSpins ? 'Kullanıldı' : 'Kilitli'}</strong>
+                </div>
+                {spinState.message ? (
+                  <p className="mt-3 rounded-lg border border-[#9b7a57]/20 bg-[#f8efe1] px-3 py-2 text-sm text-[#6d4f35]">
+                    {spinState.message}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleOpenSpinWheel}
+                  className="mt-4 rounded-lg bg-[#5B1F2A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#4a1822] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  Çarkıfeleğe Git
+                </button>
+                <Link
+                  href="/tum-urunler"
+                  className="ml-2 mt-4 inline-flex rounded-lg border border-[#9b7a57]/30 bg-white px-4 py-2.5 text-sm font-medium text-[#6d4f35] transition-colors hover:bg-[#f7f0e6]"
+                >
+                  Alışverişe Devam Et
+                </Link>
+                {spinState.usedSpins > 0 ? (
+                  <p className="mt-3 text-sm text-emerald-700">
+                    Çark hakkınız kullanıldı, kuponunuz hesabınızda kayıtlı.
+                  </p>
+                ) : (
+                  <p className="mt-3 text-sm text-[#7d5f45]">
+                    Çark hakkını açmak için kalan: <strong>{spendForReward.toLocaleString('tr-TR')} TL</strong>
+                  </p>
+                )}
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 {dashboardCards.map((card) => {
                   const className =
@@ -679,6 +825,70 @@ export function AccountDashboardClient({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'coupons' && (
+            <div>
+              <h2 className="font-serif text-2xl text-[#4d3523]">Kuponlarım</h2>
+              <p className="mt-2 text-sm text-[#7d5f45]">
+                Çarkıfelek veya kampanyalardan kazandığınız kuponlar burada listelenir.
+              </p>
+
+              {spinState.rewards.length ? (
+                <div className="mt-5 rounded-2xl border border-[#9b7a57]/20 bg-white/80 p-5">
+                  <div className="space-y-3">
+                    {spinState.rewards.map((reward, index) => (
+                      <div
+                        key={`${reward.code}-${index}`}
+                        className="flex items-start justify-between gap-3 rounded-xl border border-[#9b7a57]/20 bg-[#fff9ef] p-3"
+                      >
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-[#8a6b4b]">
+                            {reward.label || 'Kupon'} • Hak #{reward.spinIndex || index + 1}
+                          </p>
+                          <p className="mt-2 font-mono text-xl font-semibold tracking-wide text-[#5B1F2A]">
+                            {reward.code}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCoupon(reward.code)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-[#9b7a57]/30 bg-white px-3 py-2 text-xs font-medium text-[#6d4f35] transition-colors hover:bg-[#f7f0e6]"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Kopyala
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 rounded-lg border border-[#9b7a57]/20 bg-[#f8efe1] p-3 text-sm text-[#6d4f35]">
+                    <p className="font-medium text-[#4d3523]">Nasıl kullanılır?</p>
+                    <ol className="mt-2 list-decimal space-y-1 pl-5">
+                      <li>Ürünleri sepete ekleyin ve ödeme adımına geçin.</li>
+                      <li>“İndirim kodu” alanına kupon kodunu yapıştırın.</li>
+                      <li>“Uygula” deyin; indirim toplam tutardan düşer.</li>
+                    </ol>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 rounded-2xl border border-dashed border-[#9b7a57]/30 bg-gradient-to-br from-white to-[#f8efe1] p-6">
+                  <div className="flex items-center gap-2 text-[#6d4f35]">
+                    <TicketPercent className="h-5 w-5" />
+                    <p className="text-sm">Henüz tanımlı bir kuponunuz yok.</p>
+                  </div>
+                  <p className="mt-2 text-sm text-[#7d5f45]">
+                    Çarkıfelek uygunluğunu sağladığınızda kazandığınız kuponlar burada otomatik görünür.
+                  </p>
+                </div>
+              )}
+
+              {couponMessage ? (
+                <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  {couponMessage}
+                </p>
+              ) : null}
             </div>
           )}
         </div>

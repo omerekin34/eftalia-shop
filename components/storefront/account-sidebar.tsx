@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Heart, LogOut, MapPin, Package, Star, User, UserCog } from 'lucide-react'
+import { Heart, LogOut, MapPin, Package, Star, TicketPercent, User, UserCog } from 'lucide-react'
 
-export type AccountNavTabKey = 'dashboard' | 'orders' | 'profile' | 'addresses' | 'favorites'
+export type AccountNavTabKey = 'dashboard' | 'orders' | 'profile' | 'addresses' | 'favorites' | 'coupons'
 
 type SidebarEntry =
   | { type: 'tab'; key: AccountNavTabKey; label: string; icon: typeof User }
@@ -16,6 +16,7 @@ const sidebarEntries: SidebarEntry[] = [
   { type: 'tab', key: 'profile', label: 'Üyelik Bilgilerim', icon: UserCog },
   { type: 'tab', key: 'addresses', label: 'Adres Defterim', icon: MapPin },
   { type: 'link', href: '/account/reviews', label: 'Değerlendirmelerim', icon: Star },
+  { type: 'tab', key: 'coupons', label: 'Kuponlarım', icon: TicketPercent },
   { type: 'tab', key: 'favorites', label: 'Favorilerim', icon: Heart },
 ]
 
@@ -27,6 +28,7 @@ function tabHref(key: AccountNavTabKey) {
 function getTabFromParam(value: string | null): AccountNavTabKey {
   if (value === 'orders') return 'orders'
   if (value === 'favorites') return 'favorites'
+  if (value === 'coupons') return 'coupons'
   if (value === 'addresses') return 'addresses'
   if (value === 'profile') return 'profile'
   return 'dashboard'

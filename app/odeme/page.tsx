@@ -29,7 +29,7 @@ type ShippingPolicySummary = {
 } | null
 
 export default function OdemePage() {
-  const { items, totalItems } = useCart()
+  const { items, totalItems, clearCart } = useCart()
   const [phase, setPhase] = useState<'idle' | 'redirecting' | 'error'>('idle')
   const [checkoutError, setCheckoutError] = useState('')
   const [addressesLoaded, setAddressesLoaded] = useState(false)
@@ -131,13 +131,15 @@ export default function OdemePage() {
         if (!data.checkoutUrl) {
           throw new Error('Ödeme bağlantısı alınamadı.')
         }
+        // Shopify checkout'a geçerken sepeti temizle; sipariş dönüşünde ürünler tekrar görünmesin.
+        clearCart()
         window.location.assign(data.checkoutUrl)
       } catch (err) {
         setCheckoutError(err instanceof Error ? err.message : 'Bir hata oluştu.')
         setPhase('error')
       }
     },
-    [items, savedAddresses.length, selectedCustomerAddressId]
+    [items, savedAddresses.length, selectedCustomerAddressId, clearCart]
   )
 
   useEffect(() => {

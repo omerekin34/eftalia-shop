@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* EFTALIA CASE Brand Palette */
+  /* EFTALIA Brand Palette */
   /* Warm Ivory/Cream Background - like high-quality art paper */
   --background: oklch(0.97 0.008 85);
   --foreground: oklch(0.35 0.04 55);

@@ -7,7 +7,7 @@ import Link from 'next/link'
 
 export function Hero() {
   return (
-    <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background paper-texture">
+    <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ivory-warm paper-texture">
       {/* Decorative elements */}
       <div className="pointer-events-none absolute inset-0">
         {/* Top left ornament */}
@@ -51,7 +51,7 @@ export function Hero() {
             </motion.div>
 
             <h1 className="font-serif text-4xl leading-tight tracking-wide text-bronze sm:text-5xl md:text-6xl lg:text-7xl text-balance">
-              {'EFTALIA CASE:'}
+              {'EFTALIA:'}
               <br />
               <span className="italic text-gold">{'"'}Her Detayda</span>
               <br />
@@ -109,18 +109,15 @@ export function Hero() {
               <motion.div
                 animate={{ y: [0, -6, 0] }}
                 transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute inset-0 flex items-center justify-center p-8 transition-transform duration-500 group-hover:scale-[1.035]"
+                className="absolute inset-0 p-4 transition-transform duration-500 group-hover:scale-[1.02]"
               >
-                <div className="h-full w-full rounded-sm bg-ivory-warm/90 p-2">
-                  <Image
-                    src="/images/logo.jpg"
-                    alt="EFTALIA CASE - Her Detayda Zarafet"
-                    width={500}
-                    height={600}
-                    className="h-full w-full object-contain mix-blend-multiply brightness-[0.98] contrast-110 saturate-125"
-                    priority
-                  />
-                </div>
+                <Image
+                  src="/images/1.png"
+                  alt="EFTALIA - Her Detayda Zarafet"
+                  fill
+                  className="object-cover object-center brightness-[0.99] contrast-110 saturate-110"
+                  priority
+                />
               </motion.div>
 
               {/* Gold shimmer sweep */}

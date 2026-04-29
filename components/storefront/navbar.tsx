@@ -279,7 +279,7 @@ export function Navbar() {
                 className="flex flex-col items-center"
               >
                 <h1 className="font-serif text-lg tracking-[0.35em] text-bronze-dark sm:text-xl md:text-2xl">
-                  EFTALIA CASE
+                  EFTALIA
                 </h1>
                 <span className="mt-0.5 text-[9px] tracking-[0.4em] text-rose sm:text-[10px] md:text-xs">
                   LEATHER GOODS
@@ -750,7 +750,7 @@ export function Navbar() {
               <div className="group mt-auto border-t border-bronze/10 px-6 py-6">
                 <div className="inline-flex items-center rounded-md border border-bronze/20 bg-ivory-warm px-4 py-2.5 transition-all duration-300 group-hover:border-gold/40 group-hover:bg-white">
                   <span className="font-serif text-xl tracking-[0.2em] text-bronze-dark transition-colors duration-300 group-hover:text-gold">
-                    EFTALIA CASE
+                    EFTALIA
                   </span>
                 </div>
                 <p className="mt-3 text-xs tracking-[0.25em] text-bronze/45 transition-colors duration-300 group-hover:text-bronze/60">
