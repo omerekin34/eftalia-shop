@@ -66,17 +66,7 @@ const searchCategories = [
 
 const helperSearches = ['Yeni Gelenler', 'Çok Satanlar', 'Mint Çanta', 'Kartlık', 'Süet Çanta']
 
-function personalizationSignature(item: {
-  personalization?: { enabled: boolean; occasion?: string; note?: string }
-}) {
-  if (!item.personalization?.enabled) return 'none'
-  const occasion = String(item.personalization.occasion || '').trim().toLocaleLowerCase('tr')
-  const note = String(item.personalization.note || '').trim().toLocaleLowerCase('tr')
-  return `${occasion}::${note}`
-}
-
 export function Navbar() {
-  const PERSONALIZATION_FEE = 100
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -87,13 +77,7 @@ export function Navbar() {
   const [dynamicCollections, setDynamicCollections] = useState<MenuCategory[]>([])
   const [searchProducts, setSearchProducts] = useState<SearchProduct[]>([])
   const { items, totalItems, removeItem, updateItemQuantity, isDrawerOpen, setDrawerOpen } = useCart()
-  const cartTotalAmount = items.reduce(
-    (acc, item) =>
-      acc +
-      item.price * item.quantity +
-      (item.personalization?.enabled ? PERSONALIZATION_FEE * item.quantity : 0),
-    0
-  )
+  const cartTotalAmount = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
 
   const menuCategories = useMemo(() => {
     const seen = new Set<string>()
@@ -529,7 +513,7 @@ export function Navbar() {
                   ) : (
                     <div className="space-y-3">
                       {items.map((item) => (
-                        <div key={`${item.id}-${item.color || 'renksiz'}-${personalizationSignature(item)}`} className="rounded-xl border border-bronze/15 bg-ivory-warm p-4">
+                        <div key={`${item.id}-${item.color || 'renksiz'}`} className="rounded-xl border border-bronze/15 bg-ivory-warm p-4">
                           <Link
                             href={`/product/${item.slug}${item.color ? `?color=${encodeURIComponent(item.color)}` : ''}`}
                             onClick={() => setDrawerOpen(false)}
@@ -554,11 +538,6 @@ export function Navbar() {
                               <p className="mt-1 text-xs text-bronze/60">
                                 {item.color ? `Renk: ${item.color}` : 'Standart'}
                               </p>
-                              {item.personalization?.enabled ? (
-                                <p className="mt-1 text-[11px] text-bronze/70">
-                                  Kişiselleştirme: {item.personalization.occasion || 'Özel Baskı'}
-                                </p>
-                              ) : null}
                             </div>
                           </Link>
                           <div className="mt-3 flex items-center justify-between">
@@ -568,8 +547,7 @@ export function Navbar() {
                                   updateItemQuantity(
                                     item.id,
                                     item.color,
-                                    Math.max(1, item.quantity - 1),
-                                    personalizationSignature(item)
+                                    Math.max(1, item.quantity - 1)
                                   )
                                 }
                                 className="p-2 text-bronze/75"
@@ -583,8 +561,7 @@ export function Navbar() {
                                   updateItemQuantity(
                                     item.id,
                                     item.color,
-                                    item.quantity + 1,
-                                    personalizationSignature(item)
+                                    item.quantity + 1
                                   )
                                 }
                                 className="p-2 text-bronze/75"
@@ -596,14 +573,11 @@ export function Navbar() {
 
                             <div className="flex items-center gap-3">
                               <span className="text-sm font-medium text-bronze-dark">
-                                {(
-                                  item.price * item.quantity +
-                                  (item.personalization?.enabled ? PERSONALIZATION_FEE * item.quantity : 0)
-                                ).toLocaleString('tr-TR')}{' '}
+                                {(item.price * item.quantity).toLocaleString('tr-TR')}{' '}
                                 TL
                               </span>
                               <button
-                                onClick={() => removeItem(item.id, item.color, personalizationSignature(item))}
+                                onClick={() => removeItem(item.id, item.color)}
                                 className="text-bronze/55 transition-colors hover:text-rose"
                                 aria-label="Ürünü kaldır"
                               >

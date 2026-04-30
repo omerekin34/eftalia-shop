@@ -67,15 +67,6 @@ export function Hero() {
               Detayın sanatını keşfedin. El yapımı deri ürünlerde küresel standartlar, geleneğin çağdaş zarafetle buluştuğu yer.
             </motion.p>
 
-            <div className="mt-5 rounded-xl border border-[#b8956a]/25 bg-white/65 px-4 py-3 text-left shadow-[0_16px_30px_-26px_rgba(66,46,35,0.45)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-bronze/70">
-                Premium Kişiselleştirme
-              </p>
-              <p className="mt-1 text-sm text-bronze/75">
-                Tüm ürünlerde özel baskı: Sevgililer Günü, Anneler Günü, Babalar Günü ve doğum günü temalarına uygun kişisel not ekleyin.
-              </p>
-            </div>
-
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

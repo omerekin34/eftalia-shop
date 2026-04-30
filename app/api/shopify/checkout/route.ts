@@ -5,9 +5,6 @@ import { withCheckoutLocale } from '@/lib/shopify/checkout-url'
 import { createCart, getCart, type CreateCartOptions } from '@/lib/shopify/services'
 
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
-const PERSONALIZATION_FEE_VARIANT_ID = String(process.env.SHOPIFY_PERSONALIZATION_FEE_VARIANT_ID || '').trim()
-const PERSONALIZATION_FEE_KEY = 'Kisisellestirme'
-const PERSONALIZATION_FEE_VALUE = 'Evet'
 
 type CartLineBody = {
   merchandiseId?: string
@@ -21,19 +18,6 @@ function isShopifyVariantGid(id: string) {
 
 function isCustomerMailingAddressGid(id: string) {
   return id.startsWith('gid://shopify/MailingAddress/')
-}
-
-function hasPersonalizationAttribute(
-  attributes?: Array<{ key?: string; value?: string }>
-) {
-  if (!Array.isArray(attributes)) return false
-  return attributes.some(
-    (attr) =>
-      String(attr?.key || '').trim().toLocaleLowerCase('tr') ===
-        PERSONALIZATION_FEE_KEY.toLocaleLowerCase('tr') &&
-      String(attr?.value || '').trim().toLocaleLowerCase('tr') ===
-        PERSONALIZATION_FEE_VALUE.toLocaleLowerCase('tr')
-  )
 }
 
 export async function POST(request: NextRequest) {
@@ -72,30 +56,6 @@ export async function POST(request: NextRequest) {
           { error: 'Geçerli ürün varyantı bulunamadı. Lütfen sepeti güncelleyip tekrar deneyin.' },
           { status: 400 }
         )
-      }
-
-      const personalizationQuantity = lines.reduce((sum, line) => {
-        return hasPersonalizationAttribute(line.attributes) ? sum + line.quantity : sum
-      }, 0)
-
-      if (personalizationQuantity > 0) {
-        if (!PERSONALIZATION_FEE_VARIANT_ID || !isShopifyVariantGid(PERSONALIZATION_FEE_VARIANT_ID)) {
-          return NextResponse.json(
-            {
-              error:
-                'Kişiselleştirme ücreti ürünü tanımlı değil. SHOPIFY_PERSONALIZATION_FEE_VARIANT_ID ayarını yapın.',
-            },
-            { status: 500 }
-          )
-        }
-        lines.push({
-          merchandiseId: PERSONALIZATION_FEE_VARIANT_ID,
-          quantity: personalizationQuantity,
-          attributes: [
-            { key: PERSONALIZATION_FEE_KEY, value: PERSONALIZATION_FEE_VALUE },
-            { key: 'Ucret', value: '100 TL' },
-          ],
-        })
       }
 
       const cookieStore = await cookies()

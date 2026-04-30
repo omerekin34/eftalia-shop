@@ -160,7 +160,10 @@ export async function getWheelDiscountRewards() {
       if (!codes.length) return []
 
       const normalizedPercent = normalizeDiscountPercent(discount?.customerGets?.value?.percentage)
-      const hasPercentage = Number.isFinite(normalizedPercent) && normalizedPercent > 0
+      const hasPercentage =
+        typeof normalizedPercent === 'number' &&
+        Number.isFinite(normalizedPercent) &&
+        normalizedPercent > 0
 
       return codes.map((code) => ({
         code,
