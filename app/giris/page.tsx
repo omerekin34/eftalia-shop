@@ -74,6 +74,7 @@ function LoginPageContent() {
             if (!response.ok) {
               throw new Error(data?.error || 'Google ile giriş başarısız oldu.')
             }
+            window.dispatchEvent(new Event('auth:changed'))
             router.push('/account')
             router.refresh()
           } catch (error) {
@@ -148,6 +149,7 @@ function LoginPageContent() {
         throw new Error(data?.error || 'İşlem sırasında bir hata oluştu.')
       }
 
+      window.dispatchEvent(new Event('auth:changed'))
       router.push('/account')
       router.refresh()
     } catch (error) {

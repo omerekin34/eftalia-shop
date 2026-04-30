@@ -213,6 +213,7 @@ export function Navbar() {
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
+    window.dispatchEvent(new Event('auth:changed'))
     setIsAuthenticated(false)
     setCustomerName('')
     setIsMobileMenuOpen(false)

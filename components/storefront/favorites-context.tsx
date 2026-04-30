@@ -45,64 +45,88 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const [customerId, setCustomerId] = useState('')
   const [toastMessage, setToastMessage] = useState('')
 
-  useEffect(() => {
-    const loadSession = async () => {
-      try {
-        const response = await fetch('/api/auth/session', { cache: 'no-store' })
-        const data = (await response.json()) as {
-          authenticated?: boolean
-          customer?: { id?: string } | null
-        }
-        const authenticated = Boolean(data?.authenticated)
-        const currentCustomerId = data?.customer?.id || ''
-        setIsAuthenticated(authenticated)
-        setCustomerId(currentCustomerId)
+  const loadSession = useCallback(async () => {
+    try {
+      const response = await fetch('/api/auth/session', { cache: 'no-store' })
+      const data = (await response.json()) as {
+        authenticated?: boolean
+        customer?: { id?: string } | null
+      }
+      const authenticated = Boolean(data?.authenticated)
+      const currentCustomerId = data?.customer?.id || ''
+      setIsAuthenticated(authenticated)
+      setCustomerId(currentCustomerId)
 
-        if (!authenticated || !currentCustomerId) {
-          setFavorites([])
+      if (!authenticated || !currentCustomerId) {
+        setFavorites([])
+        return
+      }
+
+      const localRaw = localStorage.getItem(getStorageKey(currentCustomerId))
+      const localFavorites = localRaw ? ((JSON.parse(localRaw) as FavoriteItem[]) || []) : []
+
+      try {
+        const remoteResponse = await fetch('/api/account/favorites', { cache: 'no-store' })
+        const remoteData = (await remoteResponse.json()) as { favorites?: FavoriteItem[] }
+        const remoteFavorites = Array.isArray(remoteData?.favorites) ? remoteData.favorites : []
+
+        if (remoteFavorites.length > 0) {
+          setFavorites(remoteFavorites)
+          localStorage.setItem(getStorageKey(currentCustomerId), JSON.stringify(remoteFavorites))
           return
         }
 
-        const localRaw = localStorage.getItem(getStorageKey(currentCustomerId))
-        const localFavorites = localRaw ? ((JSON.parse(localRaw) as FavoriteItem[]) || []) : []
-
-        try {
-          const remoteResponse = await fetch('/api/account/favorites', { cache: 'no-store' })
-          const remoteData = (await remoteResponse.json()) as { favorites?: FavoriteItem[] }
-          const remoteFavorites = Array.isArray(remoteData?.favorites) ? remoteData.favorites : []
-
-          if (remoteFavorites.length > 0) {
-            setFavorites(remoteFavorites)
-            localStorage.setItem(getStorageKey(currentCustomerId), JSON.stringify(remoteFavorites))
-            return
-          }
-
-          if (localFavorites.length > 0) {
-            setFavorites(localFavorites)
-            await fetch('/api/account/favorites', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ favorites: localFavorites }),
-            })
-            return
-          }
-        } catch {
-          // Shopify sync fails, keep local favorites instead of breaking session UX.
-          if (localFavorites.length > 0) {
-            setFavorites(localFavorites)
-            return
-          }
+        if (localFavorites.length > 0) {
+          setFavorites(localFavorites)
+          await fetch('/api/account/favorites', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ favorites: localFavorites }),
+          })
+          return
         }
-
-        setFavorites([])
       } catch {
-        setIsAuthenticated(false)
-        setFavorites([])
+        // Shopify sync fails, keep local favorites instead of breaking session UX.
+        if (localFavorites.length > 0) {
+          setFavorites(localFavorites)
+          return
+        }
+      }
+
+      setFavorites([])
+    } catch {
+      setIsAuthenticated(false)
+      setFavorites([])
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadSession()
+  }, [loadSession])
+
+  useEffect(() => {
+    const handleFocus = () => {
+      void loadSession()
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadSession()
       }
     }
+    const handleAuthChanged = () => {
+      void loadSession()
+    }
 
-    loadSession()
-  }, [])
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('auth:changed', handleAuthChanged)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('auth:changed', handleAuthChanged)
+    }
+  }, [loadSession])
 
   useEffect(() => {
     if (!isAuthenticated || !customerId) return
