@@ -33,6 +33,7 @@ declare global {
 function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const shopifyAccountUrl = String(process.env.NEXT_PUBLIC_SHOPIFY_CUSTOMER_ACCOUNT_URL || '').trim()
   const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login'
   const [mode, setMode] = useState<AuthMode>(initialMode)
   const [showPassword, setShowPassword] = useState(false)
@@ -50,6 +51,15 @@ function LoginPageContent() {
 
   const handleInputChange = (field: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleShopifyLogin = () => {
+    setErrorMessage('')
+    if (!shopifyAccountUrl) {
+      setErrorMessage('Shopify hesap girişi için NEXT_PUBLIC_SHOPIFY_CUSTOMER_ACCOUNT_URL değişkenini ekleyin.')
+      return
+    }
+    window.location.assign(shopifyAccountUrl)
   }
 
   useEffect(() => {
@@ -151,7 +161,21 @@ function LoginPageContent() {
       router.push('/account')
       router.refresh()
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'İşlem sırasında bir hata oluştu.')
+      const message = error instanceof Error ? error.message : 'İşlem sırasında bir hata oluştu.'
+      const normalized = message.toLocaleLowerCase('tr')
+      const shouldUseShopifyLogin =
+        mode === 'login' &&
+        Boolean(shopifyAccountUrl) &&
+        (normalized.includes('unidentified customer') ||
+          normalized.includes('customer not found') ||
+          normalized.includes('invalid email or password'))
+
+      if (shouldUseShopifyLogin) {
+        setErrorMessage('Shopify güvenli hesap girişine yönlendiriliyorsunuz...')
+        setTimeout(() => window.location.assign(shopifyAccountUrl), 400)
+      } else {
+        setErrorMessage(message)
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -228,6 +252,19 @@ function LoginPageContent() {
                 {!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
                   <p className="mt-2 text-xs text-bronze/60">
                     Google girişi için NEXT_PUBLIC_GOOGLE_CLIENT_ID değişkenini ekleyin.
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleShopifyLogin}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-bronze/25 bg-white px-4 py-3 text-sm font-medium text-bronze transition-colors hover:bg-ivory-warm"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Shopify ile Bağlan
+                </button>
+                {!shopifyAccountUrl ? (
+                  <p className="mt-2 text-xs text-bronze/60">
+                    Shopify hesabı için NEXT_PUBLIC_SHOPIFY_CUSTOMER_ACCOUNT_URL değişkenini ekleyin.
                   </p>
                 ) : null}
               </div>
