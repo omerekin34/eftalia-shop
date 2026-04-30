@@ -156,7 +156,7 @@ export async function getWheelDiscountRewards() {
       const discount = node?.codeDiscount
       const codes = (discount?.codes?.nodes || [])
         .map((entry) => String(entry?.code || '').trim().toUpperCase())
-        .filter(Boolean)
+        .filter((code) => Boolean(code) && code.startsWith(WHEEL_DISCOUNT_PREFIX))
       if (!codes.length) return []
 
       const normalizedPercent = normalizeDiscountPercent(discount?.customerGets?.value?.percentage)
@@ -172,6 +172,7 @@ export async function getWheelDiscountRewards() {
   const uniqueByCode = Array.from(
     new Map(rewardsFromShopify.map((reward) => [reward.code, reward])).values()
   )
+    .sort((a, b) => a.code.localeCompare(b.code, 'tr'))
   if (uniqueByCode.length) {
     return uniqueByCode
   }

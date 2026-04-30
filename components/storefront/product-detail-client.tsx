@@ -59,6 +59,15 @@ const colorHexMap: Record<string, string> = {
   mint: '#98D4BB',
 }
 
+const personalizationOccasions = [
+  'Sevgililer Günü',
+  'Anneler Günü',
+  'Babalar Günü',
+  'Doğum Günü',
+  'Yıl Dönümü',
+  'Diğer',
+]
+
 function formatPrice(price: number) {
   return new Intl.NumberFormat('tr-TR', {
     style: 'currency',
@@ -114,6 +123,9 @@ export function ProductDetailClient({
   const [reviewError, setReviewError] = useState('')
   const [toastMessage, setToastMessage] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isPersonalizationEnabled, setIsPersonalizationEnabled] = useState(false)
+  const [personalizationOccasion, setPersonalizationOccasion] = useState(personalizationOccasions[0])
+  const [personalizationNote, setPersonalizationNote] = useState('')
 
   const colorOption = product.options.find((option) =>
     ['renk', 'color'].includes((option.name || '').toLocaleLowerCase('tr'))
@@ -195,6 +207,11 @@ export function ProductDetailClient({
 
   const handleAddToCart = () => {
     if (!selectedVariant || !inStock) return
+    const note = personalizationNote.trim()
+    if (isPersonalizationEnabled && note.length < 2) {
+      setToastMessage('Lütfen baskı metnini en az 2 karakter giriniz.')
+      return
+    }
     addItem(
       {
         id: selectedVariant.id,
@@ -204,6 +221,13 @@ export function ProductDetailClient({
         image: galleryImages[0],
         color: selectedColor || undefined,
         maxQuantity: maxSelectableQuantity,
+        personalization: isPersonalizationEnabled
+          ? {
+              enabled: true,
+              occasion: personalizationOccasion,
+              note,
+            }
+          : undefined,
       },
       quantity
     )
@@ -213,6 +237,11 @@ export function ProductDetailClient({
 
   const handleBuyNow = () => {
     if (!selectedVariant || !inStock) return
+    const note = personalizationNote.trim()
+    if (isPersonalizationEnabled && note.length < 2) {
+      setToastMessage('Lütfen baskı metnini en az 2 karakter giriniz.')
+      return
+    }
     addItem(
       {
         id: selectedVariant.id,
@@ -222,6 +251,13 @@ export function ProductDetailClient({
         image: galleryImages[0],
         color: selectedColor || undefined,
         maxQuantity: maxSelectableQuantity,
+        personalization: isPersonalizationEnabled
+          ? {
+              enabled: true,
+              occasion: personalizationOccasion,
+              note,
+            }
+          : undefined,
       },
       quantity
     )
@@ -522,6 +558,64 @@ export function ProductDetailClient({
             </button>
           </div>
         </div>
+
+        <section className="mt-6 rounded-2xl border border-[#9b7a57]/25 bg-gradient-to-br from-[#fffdf8] to-[#fff7ed] p-5 shadow-[0_18px_40px_-28px_rgba(83,58,39,0.45)]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-bronze/70">Premium Kişiselleştirme</p>
+              <p className="mt-1 text-sm text-bronze/75">
+                Sevgililer Günü, Anneler Günü, Babalar Günü ve doğum günü için özel baskı ekleyin.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPersonalizationEnabled((prev) => !prev)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold tracking-wide transition-colors ${
+                isPersonalizationEnabled
+                  ? 'border-[#7B1E2B] bg-[#7B1E2B] text-white'
+                  : 'border-bronze/25 bg-white text-bronze'
+              }`}
+            >
+              {isPersonalizationEnabled ? 'Aktif' : 'Özelleştir'}
+            </button>
+          </div>
+
+          {isPersonalizationEnabled ? (
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-bronze/60">
+                  Konsept
+                </label>
+                <select
+                  value={personalizationOccasion}
+                  onChange={(event) => setPersonalizationOccasion(event.target.value)}
+                  className="w-full rounded-xl border border-bronze/20 bg-white px-3 py-2.5 text-sm text-bronze outline-none focus:border-bronze/40"
+                >
+                  {personalizationOccasions.map((occasion) => (
+                    <option key={occasion} value={occasion}>
+                      {occasion}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-bronze/60">
+                  Baskı Metni
+                </label>
+                <textarea
+                  value={personalizationNote}
+                  onChange={(event) => setPersonalizationNote(event.target.value.slice(0, 70))}
+                  rows={2}
+                  placeholder="Örn: İyi ki varsın Aşkım • 14.02.2026"
+                  className="w-full rounded-xl border border-bronze/20 bg-white px-3 py-2.5 text-sm text-bronze outline-none focus:border-bronze/40"
+                />
+                <p className="mt-1 text-[11px] text-bronze/55">
+                  {personalizationNote.length}/70 karakter. Bu bilgi Shopify ödeme adımına taşınır.
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </section>
 
         {selectedVariant && inStock && selectedVariant.quantityAvailable > 0 && selectedVariant.quantityAvailable <= 10 ? (
           <div className="mt-4 rounded-xl border border-[#7B1E2B]/30 bg-gradient-to-r from-[#fff1f3] to-[#ffe7eb] px-4 py-3 shadow-[0_10px_22px_-16px_rgba(123,30,43,0.65)]">

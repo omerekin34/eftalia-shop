@@ -11,14 +11,24 @@ export interface CartItem {
   color?: string
   maxQuantity?: number
   quantity: number
+  personalization?: {
+    enabled: boolean
+    occasion?: string
+    note?: string
+  }
 }
 
 interface CartContextValue {
   items: CartItem[]
   totalItems: number
   addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void
-  removeItem: (itemId: string, color?: string) => void
-  updateItemQuantity: (itemId: string, color: string | undefined, quantity: number) => void
+  removeItem: (itemId: string, color?: string, personalizationSignature?: string) => void
+  updateItemQuantity: (
+    itemId: string,
+    color: string | undefined,
+    quantity: number,
+    personalizationSignature?: string
+  ) => void
   clearCart: () => void
   /** Sepet yan paneli açık mı (mobil sticky bar vb. ile çakışmayı önlemek için). */
   isDrawerOpen: boolean
@@ -27,6 +37,13 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | undefined>(undefined)
 const CART_STORAGE_KEY = 'eftelia_cart_items'
+
+function getPersonalizationSignature(item: Pick<CartItem, 'personalization'>) {
+  if (!item.personalization?.enabled) return 'none'
+  const occasion = String(item.personalization.occasion || '').trim().toLocaleLowerCase('tr')
+  const note = String(item.personalization.note || '').trim().toLocaleLowerCase('tr')
+  return `${occasion}::${note}`
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
@@ -52,7 +69,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = (item: Omit<CartItem, 'quantity'>, quantity = 1) => {
     setItems((prev) => {
       const existingIndex = prev.findIndex(
-        (entry) => entry.id === item.id && entry.color === item.color
+        (entry) =>
+          entry.id === item.id &&
+          entry.color === item.color &&
+          getPersonalizationSignature(entry) === getPersonalizationSignature(item)
       )
 
       if (existingIndex > -1) {
@@ -81,21 +101,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
-  const removeItem = (itemId: string, color?: string) => {
+  const removeItem = (itemId: string, color?: string, personalizationSignature?: string) => {
     setItems((prev) =>
-      prev.filter((entry) => !(entry.id === itemId && entry.color === color))
+      prev.filter(
+        (entry) =>
+          !(
+            entry.id === itemId &&
+            entry.color === color &&
+            (personalizationSignature
+              ? getPersonalizationSignature(entry) === personalizationSignature
+              : true)
+          )
+      )
     )
   }
 
   const updateItemQuantity = (
     itemId: string,
     color: string | undefined,
-    quantity: number
+    quantity: number,
+    personalizationSignature?: string
   ) => {
     setItems((prev) =>
       prev
         .map((entry) => {
-          if (!(entry.id === itemId && entry.color === color)) return entry
+          const isSamePersonalization = personalizationSignature
+            ? getPersonalizationSignature(entry) === personalizationSignature
+            : true
+          if (!(entry.id === itemId && entry.color === color && isSamePersonalization)) return entry
           const maxAllowed =
             typeof entry.maxQuantity === 'number' && entry.maxQuantity > 0
               ? entry.maxQuantity

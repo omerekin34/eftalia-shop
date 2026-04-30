@@ -8,6 +8,13 @@ export function SpinWheelLauncher() {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setIsModalOpen(true)
+    }, 450)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
     const openModal = () => setIsModalOpen(true)
     window.addEventListener('eftalia:open-spin-wheel', openModal)
     return () => {

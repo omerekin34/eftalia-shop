@@ -29,6 +29,7 @@ type ShippingPolicySummary = {
 } | null
 
 export default function OdemePage() {
+  const PERSONALIZATION_FEE = 100
   const { items, totalItems, clearCart } = useCart()
   const [phase, setPhase] = useState<'idle' | 'redirecting' | 'error'>('idle')
   const [checkoutError, setCheckoutError] = useState('')
@@ -45,8 +46,12 @@ export default function OdemePage() {
   )
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  const personalizationTotal = items.reduce(
+    (acc, item) => acc + (item.personalization?.enabled ? PERSONALIZATION_FEE * item.quantity : 0),
+    0
+  )
   const shipping = subtotal > 1500 || subtotal === 0 ? 0 : 99.9
-  const total = subtotal + shipping
+  const total = subtotal + personalizationTotal + shipping
   const needsAddressChoice = savedAddresses.length > 1
 
   useEffect(() => {
@@ -120,6 +125,19 @@ export default function OdemePage() {
             lines: items.map((item) => ({
               merchandiseId: item.id,
               quantity: item.quantity,
+              attributes: item.personalization?.enabled
+                ? [
+                    { key: 'Kisisellestirme', value: 'Evet' },
+                    {
+                      key: 'Kisisellestirme Konsepti',
+                      value: String(item.personalization.occasion || 'Ozel').trim(),
+                    },
+                    {
+                      key: 'Baski Metni',
+                      value: String(item.personalization.note || '').trim(),
+                    },
+                  ].filter((entry) => entry.value)
+                : undefined,
             })),
             ...(customerAddressId ? { customerAddressId } : {}),
           }),
@@ -437,6 +455,11 @@ export default function OdemePage() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-bronze-dark">{item.name}</p>
                         <p className="text-xs text-bronze/60">Adet: {item.quantity}</p>
+                        {item.personalization?.enabled ? (
+                          <p className="text-[11px] text-bronze/70">
+                            Özelleştirme: {item.personalization.occasion || 'Özel Baskı'} (+100 TL)
+                          </p>
+                        ) : null}
                         <p className="text-xs text-bronze/70">
                           {(item.price * item.quantity).toLocaleString('tr-TR', {
                             minimumFractionDigits: 2,
@@ -459,6 +482,16 @@ export default function OdemePage() {
                   <span>Ara toplam</span>
                   <span>
                     {subtotal.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-bronze/70">
+                  <span>Kişiselleştirme</span>
+                  <span>
+                    {personalizationTotal.toLocaleString('tr-TR', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{' '}
+                    TL
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-bronze/70">

@@ -224,10 +224,12 @@ export function SpinWheelModal({
             <button
               type="button"
               onClick={handleSpin}
-              disabled={isLoading || status.remainingSpins <= 0 || !status.eligible}
+              disabled={isLoading || status.remainingSpins <= 0 || !status.eligible || status.rewardSlots <= 0}
               className="flex-1 rounded-lg bg-[#5B1F2A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#4a1822] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {!status.eligible
+              {status.rewardSlots <= 0
+                ? 'Kupon Hazırlanıyor'
+                : !status.eligible
                 ? 'Henüz Uygun Değil'
                 : status.remainingSpins <= 0
                   ? 'Kullanıldı'

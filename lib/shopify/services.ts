@@ -140,7 +140,11 @@ export type CreateCartOptions = {
 }
 
 export async function createCart(
-  lines?: Array<{ merchandiseId: string; quantity: number }>,
+  lines?: Array<{
+    merchandiseId: string
+    quantity: number
+    attributes?: Array<{ key: string; value: string }>
+  }>,
   options?: CreateCartOptions
 ) {
   type Response = {
