@@ -19,6 +19,11 @@ const TARGETS: CraftTarget[] = [
     titleKeywords: ['cuzdan', 'kartlik'],
   },
   {
+    key: 'gabardin-kumaslari',
+    aliases: ['gabardin-kumaslari'],
+    titleKeywords: ['gabardin', 'kumas'],
+  },
+  {
     key: 'taraklar',
     aliases: ['taraklar', 'tarak'],
     titleKeywords: ['tarak'],

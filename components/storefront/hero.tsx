@@ -64,7 +64,8 @@ export function Hero() {
               transition={{ delay: 0.4, duration: 0.8 }}
               className="mx-auto mt-6 max-w-md text-base leading-relaxed text-bronze-light sm:text-lg lg:mx-0 lg:mt-8"
             >
-              Detayın sanatını keşfedin. El yapımı deri ürünlerde küresel standartlar, geleneğin çağdaş zarafetle buluştuğu yer.
+              Detayın sanatını keşfedin. Cüzdan ve kartlıklarımızda seçkin deri işçiliği; çantalarımızda ise özenle seçilmiş
+              gabardin kumaş. Küresel standartlar ve geleneğin çağdaş zarafetle buluştuğu yer.
             </motion.p>
 
             <motion.div

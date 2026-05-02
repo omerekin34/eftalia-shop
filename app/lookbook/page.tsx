@@ -8,20 +8,20 @@ const lookbookStories = [
   {
     title: 'Günlük Zarafet',
     description:
-      'Şehir temposuna uyum sağlayan, hafif ve fonksiyonel kombin önerileri. Sabah toplantısından akşam buluşmasına kesintisiz geçiş.',
-    tags: ['Çapraz Çanta', 'Nötr Tonlar', 'Günlük Stil'],
+      'Gabardin kumaşın hafif ve nefes alan yapısı şehir temposuna uyum sağlar; çapraz ve omuz modelleriyle sabah toplantısından akşam buluşmasına kesintisiz geçiş.',
+    tags: ['Gabardin Çanta', 'Nötr Tonlar', 'Günlük Stil'],
   },
   {
     title: 'Atölye İmzası',
     description:
-      'Dikiş çizgileri, metal aksesuar dengesi ve deri dokusunun bir araya geldiği imza detaylar. B&E karakterini oluşturan incelikler.',
-    tags: ['El İşçiliği', 'Premium Deri', 'Özgün Tasarım'],
+      'Cüzdan ve kartlıklarda derinin sıcak dokusu; çantalarda gabardin kumaşın düzgün drape edişi ve dikiş çizgileriyle metal aksesuar dengesi. Eftalia karakterini oluşturan imza detaylar.',
+    tags: ['Deri Aksesuar', 'Gabardin', 'El İşçiliği'],
   },
   {
     title: 'Akşam Seçkisi',
     description:
-      'Özel davet ve akşam kullanımına uygun, güçlü silüetli parçalar. Minimal görünüme eşlik eden etkileyici detaylar.',
-    tags: ['Baget Form', 'Minimal Şıklık', 'Özel Gün'],
+      'Gabardin gövde üzerinde minimal çizgiler; özel davet ve akşam kullanımına uygun güçlü silüet. Zarif deri küçük aksesuarlarla tamamlanan kombinler.',
+    tags: ['Gabardin Çanta', 'Deri Detay', 'Özel Gün'],
   },
 ]
 
@@ -35,9 +35,9 @@ export default function LookbookPage() {
           <p className="text-xs tracking-[0.25em] text-bronze/70">KOLEKSİYON</p>
           <h1 className="mt-3 font-serif text-4xl text-bronze sm:text-5xl">Lookbook</h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-bronze/75 sm:text-base">
-            Lookbook, ürünleri sadece listelemek için değil; kullanım bağlamını, stil önerisini ve
-            tasarım dilini bir arada sunmak için hazırlanır. Böylece her parçayı günlük hayatta nasıl
-            konumlandırabileceğinizi daha net görebilirsiniz.
+            Lookbook; çantalarımızda kullandığımız gabardin kumaşın düşük silüet ve günlük konforunu, cüzdan ve kartlıklarda
+            ise derinin zamansız hissini nasıl taşıdığınızı göstermek için hazırlandı. Kullanım bağlamı, stil önerisi ve
+            tasarım dilini bir arada sunar—her parçayı kendi ritminizde nasıl konumlandıracağınızı netleştirir.
           </p>
         </div>
       </section>

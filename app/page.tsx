@@ -10,6 +10,7 @@ import { Marquee } from '@/components/storefront/marquee'
 import { Footer } from '@/components/storefront/footer'
 import { ProductCard } from '@/components/storefront/product-card'
 import { UgcVideoShowcase } from '@/components/storefront/ugc-video-showcase'
+import { SocialFeedShowcase, type SocialFeedPost } from '@/components/storefront/social-feed-showcase'
 import { getProducts } from '@/lib/shopify/getProducts'
 
 interface HomeProduct {
@@ -41,6 +42,9 @@ interface UgcVideo {
 export default function Home() {
   const [products, setProducts] = useState<HomeProduct[]>([])
   const [ugcVideos, setUgcVideos] = useState<UgcVideo[]>([])
+  const [socialPosts, setSocialPosts] = useState<SocialFeedPost[]>([])
+  const [socialInstagram, setSocialInstagram] = useState('')
+  const [socialTiktok, setSocialTiktok] = useState('')
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -83,6 +87,26 @@ export default function Home() {
     loadUgcVideos()
   }, [])
 
+  useEffect(() => {
+    const loadSocialFeed = async () => {
+      try {
+        const response = await fetch('/api/storefront/social-feed', { cache: 'no-store' })
+        if (!response.ok) return
+        const data = (await response.json()) as {
+          posts?: SocialFeedPost[]
+          instagramUrl?: string
+          tiktokUrl?: string
+        }
+        setSocialPosts(Array.isArray(data.posts) ? data.posts : [])
+        setSocialInstagram(String(data.instagramUrl || ''))
+        setSocialTiktok(String(data.tiktokUrl || ''))
+      } catch {
+        setSocialPosts([])
+      }
+    }
+    loadSocialFeed()
+  }, [])
+
   return (
     <motion.main
       initial={{ opacity: 0 }}
@@ -121,6 +145,11 @@ export default function Home() {
       <CraftShowcase />
       <Marquee />
       <UgcVideoShowcase items={ugcVideos} />
+      <SocialFeedShowcase
+        instagramUrl={socialInstagram}
+        tiktokUrl={socialTiktok}
+        posts={socialPosts}
+      />
       <Footer />
     </motion.main>
   )

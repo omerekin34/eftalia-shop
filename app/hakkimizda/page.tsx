@@ -10,22 +10,25 @@ const aboutPages = [
   {
     title: 'Hikayemiz',
     href: '/hakkimizda/hikayemiz',
-    description: 'B&E markasının nasıl doğduğunu, ilham kaynaklarımızı ve büyüme yolculuğumuzu keşfedin.',
+    description:
+      'Eftalia’nın doğuşu, deri ve gabardinle harmanlanan ürün felsefemiz ve büyüme yolculuğumuz.',
   },
   {
     title: 'Zanaatımız',
     href: '/hakkimizda/zanaatimiz',
-    description: 'Atölye disiplinimiz, ustalık anlayışımız ve üretim yaklaşımımız hakkında detaylı bilgi alın.',
+    description: 'Deri ve gabardinde kesim, dikiş ve kalite kontrol: atölye disiplinimiz ve ustalık anlayışımız.',
   },
   {
     title: 'Malzemeler',
     href: '/hakkimizda/malzemeler',
-    description: 'Kullandığımız deriler, astarlar, aksesuarlar ve kalite standartlarımızı inceleyin.',
+    description:
+      'Deri cüzdan ve kartlıklar, gabardin çantalar ve metal aksesuarlar: seçim kriterlerimiz ve kalite anlayışımız.',
   },
   {
     title: 'Sürdürülebilirlik',
     href: '/hakkimizda/surdurulebilirlik',
-    description: 'Uzun ömürlü tasarım, sorumlu tedarik ve bilinçli üretim adımlarımızı görün.',
+    description:
+      'Uzun ömürlü deri ve gabardin, planlı üretim ve daha az ambalaj: somut yaklaşımımız ve ilkelerimiz.',
   },
 ]
 
@@ -43,7 +46,7 @@ export default function HakkimizdaPage() {
           >
             <p className="text-xs uppercase tracking-[0.25em] text-bronze/55">Hakkımızda</p>
             <h1 className="mt-3 font-serif text-4xl text-bronze-dark sm:text-5xl">
-              B&amp;E Dünyası
+              Eftalia dünyası
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-relaxed text-bronze/70 sm:text-base">
               Her parça, zamansız estetik ve güçlü işlev arasında denge kuracak şekilde tasarlanır.

@@ -105,8 +105,8 @@ export function AccountOrdersSection({ orders }: { orders: AccountOrder[] }) {
             <p className="text-xs uppercase tracking-[0.22em] text-[#8a6b4b]">Eftalia Premium</p>
             <p className="mt-2 font-serif text-2xl text-[#4d3523] sm:text-3xl">Henüz siparişiniz yok</p>
             <p className="mt-2 text-sm leading-relaxed text-[#7d5f45]">
-              İlk deri ürününüzü seçtiğinizde siparişleriniz burada; teslimat adresi, ürün görselleri ve durum takibi tek
-              ekranda görünecek.
+              İlk siparişinizi verdiğinizde siparişleriniz burada; teslimat adresi, ürün görselleri ve durum takibi tek ekranda
+              görünecek.
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-center justify-center rounded-2xl border border-[#9b7a57]/20 bg-white/90 px-8 py-6 shadow-inner">

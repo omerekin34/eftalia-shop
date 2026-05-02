@@ -147,6 +147,10 @@
   animation: marquee 30s linear infinite;
 }
 
+.animate-marquee-payment {
+  animation: marquee 48s linear infinite;
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;

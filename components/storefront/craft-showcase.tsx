@@ -3,27 +3,38 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
+import Link from 'next/link'
 
 const craftImages = [
   {
     title: 'Deri Örnekleri',
     description: 'Mükemmelliğe ulaşmış premium tam tahıl deri',
     handle: 'deri-ornekleri',
+    href: '/tum-urunler?kategori=deri-ornekleri',
   },
   {
     title: 'Cüzdan ve Kartlıklar',
-    description: 'Şık ve fonksiyonel tasarımlar',
+    description: 'Seçkin deri, şık ve fonksiyonel tasarımlar',
     handle: 'cuzdan-kartlik',
+    href: '/tum-urunler?kategori=cuzdan-kartlik',
+  },
+  {
+    title: 'Gabardin Kumaşları',
+    description: 'Çantalarda nefes alan gabardin; dayanıklılık ve düzgün drapeler',
+    handle: 'gabardin-kumaslari',
+    href: '/tum-urunler?kategori=gabardin-kumaslari',
   },
   {
     title: 'Taraklar',
     description: 'En ince detaylara gösterilen özen',
     handle: 'taraklar',
+    href: '/tum-urunler?kategori=taraklar',
   },
   {
     title: 'Aksesuarlar',
     description: 'Stili tamamlayan özel dokunuşlar',
     handle: 'aksesuarlar',
+    href: '/tum-urunler?kategori=aksesuarlar',
   },
 ]
 
@@ -67,7 +78,8 @@ export function CraftShowcase() {
               </h2>
             </div>
             <p className="max-w-md text-base leading-relaxed text-bronze-light lg:text-right">
-              Her parça; adanmışlık, ustalık ve mükemmelliğe olan sarsılmaz bağlılığın hikayesini anlatır. Küresel standartlar, usta eller.
+              Cüzdan ve kartlıklarda deri seçimi; çantalarda gabardin kumaşın dayanıklılığı ve drapesi ustalıkla bir araya gelir.
+              Her parça adanmışlığın hikayesini taşır—küresel standartlar, usta eller.
             </p>
           </div>
         </motion.div>
@@ -86,6 +98,13 @@ export function CraftShowcase() {
                 className={`group relative ${index === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}
               >
                 <div className={`relative overflow-hidden bg-ivory ${index === 0 ? 'aspect-square' : 'aspect-[4/5]'}`}>
+                  {item.href ? (
+                    <Link
+                      href={item.href}
+                      className="absolute inset-0 z-20 rounded-[inherit]"
+                      aria-label={`${item.title} koleksiyonunu görüntüle`}
+                    />
+                  ) : null}
                   {imageMap[item.handle]?.imageUrl ? (
                     <>
                       <Image
@@ -111,10 +130,10 @@ export function CraftShowcase() {
                   </div>
                   
                   {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-bronze/0 transition-colors duration-500 group-hover:bg-bronze/5" />
+                  <div className="pointer-events-none absolute inset-0 bg-bronze/0 transition-colors duration-500 group-hover:bg-bronze/5" />
                   
                   {/* Label */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-ivory/90 to-transparent p-4 lg:p-6">
+                  <div className="pointer-events-none absolute bottom-0 left-0 right-0 bg-gradient-to-t from-ivory/90 to-transparent p-4 lg:p-6">
                     <h3
                       className={`font-serif text-lg lg:text-xl ${
                         imageMap[item.handle]?.imageUrl ? 'text-white' : 'text-bronze'
@@ -132,7 +151,7 @@ export function CraftShowcase() {
                   </div>
                   
                   {/* Corner frame */}
-                  <div className="absolute left-3 top-3 h-8 w-8 border-l border-t border-bronze/20" />
+                  <div className="pointer-events-none absolute left-3 top-3 h-8 w-8 border-l border-t border-bronze/20" />
                 </div>
               </motion.div>
             ))}
@@ -207,6 +226,40 @@ function CraftIllustration({ index }: { index: number }) {
       </g>
       {/* Decorative circle */}
       <circle cx="50" cy="62" r="40" fill="none" stroke="currentColor" strokeWidth="0.3" className="text-bronze/15" />
+    </svg>,
+    // Gabardin / fabric weave
+    <svg key="fabric" className="absolute inset-0 h-full w-full" viewBox="0 0 100 125">
+      <defs>
+        <pattern id="gabardin-weave" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <path d="M0 6 L12 6" className="stroke-bronze/18" strokeWidth="0.8" />
+          <path d="M6 0 L6 12" className="stroke-bronze/14" strokeWidth="0.5" />
+        </pattern>
+      </defs>
+      <rect width="100" height="125" fill="url(#gabardin-weave)" />
+      <g className="text-bronze/25" opacity={0.9}>
+        {[0, 1, 2, 3, 4].map((row) =>
+          [0, 1, 2, 3, 4].map((col) => (
+            <rect
+              key={`${row}-${col}`}
+              x={12 + col * 16}
+              y={18 + row * 18}
+              width="14"
+              height="10"
+              rx="1"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="0.35"
+              opacity={0.35 + (row + col) * 0.04}
+            />
+          ))
+        )}
+      </g>
+      <path
+        d="M20 95 Q 50 78 80 95"
+        fill="none"
+        className="stroke-gold/35"
+        strokeWidth="0.6"
+      />
     </svg>,
     // Paddle brush / hair brush
     <svg key="brush" className="absolute inset-0 h-full w-full" viewBox="0 0 100 125">

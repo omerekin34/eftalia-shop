@@ -20,14 +20,23 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'EFTALIA | Luxury Leather Goods',
+  title: 'EFTALIA | Deri Aksesuar & Gabardin Çantalar',
   description:
-    'Detayın sanatını keşfedin. El yapımı deri ürünlerde küresel standartlar. Premium deri defter kılıfları, çantalar ve aksesuarlar.',
-  keywords: ['luxury leather', 'handcrafted', 'leather goods', 'handbags', 'journal covers', 'artisan'],
+    'Detayın sanatını keşfedin. Cüzdan ve kartlıklarda deri işçiliği; çantalarda gabardin kumaş. El yapımı aksesuar ve seçkin çanta koleksiyonu.',
+  keywords: [
+    'luxury leather',
+    'gabardin çanta',
+    'handcrafted',
+    'leather wallets',
+    'gabardine bags',
+    'deri cüzdan',
+    'artisan',
+  ],
   generator: 'v0.app',
   openGraph: {
-    title: 'EFTALIA | Luxury Leather Goods',
-    description: 'Detayın sanatını keşfedin. El yapımı deri ürünlerde küresel standartlar.',
+    title: 'EFTALIA | Deri Aksesuar & Gabardin Çantalar',
+    description:
+      'Cüzdan ve kartlıklarda deri; çantalarda gabardin kumaş. El yapımı kalite, zamansız zarafet.',
     type: 'website',
   },
   icons: {

@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion'
 
 const marqueeItems = [
-  'EL YAPIMI DERİ ÜRÜNLER',
+  'DERİ CÜZDAN VE KARTLIK',
+  'GABARDİN KUMAŞ ÇANTALAR',
   'EFTALIA',
   'KÜRESEL LÜKS',
   'USTA ELLERİNDEN',

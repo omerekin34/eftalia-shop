@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Instagram, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { PaymentTrustMarquee } from '@/components/storefront/payment-trust-marquee'
 
 const footerLinks = {
   shop: [
@@ -99,6 +100,8 @@ export function Footer() {
         </div>
       </div>
 
+      <PaymentTrustMarquee variant="footer" />
+
       {/* Main footer */}
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5 lg:gap-8">
@@ -111,9 +114,27 @@ export function Footer() {
                 </span>
               </div>
             </Link>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-bronze-light">
-              Detayın sanatı. El yapımı deri ürünlerde küresel standartlar, geleneğin çağdaş zarafetle buluştuğu yer.
-            </p>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-20px' }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-5 max-w-[min(100%,22rem)]"
+            >
+              <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-bronze/50">El işçiliği</p>
+              <p className="mt-2.5 font-serif text-[15px] leading-[1.65] text-bronze-dark sm:text-base sm:leading-[1.7]">
+                <span className="text-bronze-dark">Detayın sanatı.</span>
+                <span className="mt-2 block text-sm font-sans font-normal leading-[1.8] text-bronze-light">
+                  <span className="text-bronze/90">Deri cüzdan ve kartlıklar</span>
+                  <span className="mx-1.5 text-bronze/35">·</span>
+                  <span className="text-bronze/90">gabardin kumaş çantalarda</span>
+                  <span className="mt-1.5 block text-bronze-light/95">küresel standartlarda incelik.</span>
+                </span>
+              </p>
+              <p className="mt-4 border-l-[3px] border-gold/45 pl-4 text-sm italic leading-[1.75] text-bronze/75">
+                Gelenek ile çağdaş zarafetin kesiştiği adres.
+              </p>
+            </motion.div>
             
             {/* Social links */}
             <div className="mt-6 flex items-center gap-4">
