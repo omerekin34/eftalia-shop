@@ -3,7 +3,11 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import type { AccountOrder } from '@/components/storefront/account-orders-section'
 import type { ServiceTicket } from '@/components/storefront/account-service-requests-panel'
-import { createShopifyReturnRequest, setCustomerJsonMetafieldAdmin } from '@/lib/shopify-admin'
+import {
+  createShopifyReturnRequest,
+  isShopifyReturnNoFulfillmentError,
+  setCustomerJsonMetafieldAdmin,
+} from '@/lib/shopify-admin'
 import { getCustomerDetails, getCustomerOrders } from '@/lib/shopify'
 
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
@@ -112,23 +116,29 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     } as ServiceTicket & { shopifyReturnId?: string; shopifyReturnName?: string }
 
+    let metafieldOnlyReturn = false
     if (type === 'return') {
       const nativeReturn = await createShopifyReturnRequest(
         orderId,
         `${reason}${note ? ` — ${note}` : ''}`
       )
       if (!nativeReturn.ok) {
-        return NextResponse.json(
-          {
-            error:
-              'Shopify iade talebi oluşturulamadı. Lütfen tekrar deneyin veya destek ile iletişime geçin. Teknik detay: ' +
-              nativeReturn.error,
-          },
-          { status: 400 }
-        )
+        if (isShopifyReturnNoFulfillmentError(nativeReturn.error)) {
+          metafieldOnlyReturn = true
+        } else {
+          return NextResponse.json(
+            {
+              error:
+                'Shopify iade talebi oluşturulamadı. Lütfen tekrar deneyin veya destek ile iletişime geçin. Teknik detay: ' +
+                nativeReturn.error,
+            },
+            { status: 400 }
+          )
+        }
+      } else {
+        ticket.shopifyReturnId = nativeReturn.returnId
+        ticket.shopifyReturnName = nativeReturn.returnName
       }
-      ticket.shopifyReturnId = nativeReturn.returnId
-      ticket.shopifyReturnName = nativeReturn.returnName
     }
 
     list.push(ticket)
@@ -139,7 +149,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: save.error }, { status: 400 })
     }
 
-    return NextResponse.json({ ok: true, ticket })
+    return NextResponse.json({ ok: true, ticket, metafieldOnlyReturn })
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Talep kaydedilemedi.' },

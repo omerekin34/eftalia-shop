@@ -1,11 +1,43 @@
 import 'server-only'
 
-const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN
+function normalizeShopifyStoreDomain(raw: string | undefined): string {
+  if (!raw) return ''
+  return raw
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .split('/')[0]
+    ?.replace(/^www\./i, '') || ''
+}
+
+const SHOPIFY_STORE_DOMAIN = normalizeShopifyStoreDomain(process.env.SHOPIFY_STORE_DOMAIN)
 const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || '2025-01'
 const SHOPIFY_ADMIN_ACCESS_TOKEN = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
 const WHEEL_DISCOUNT_PREFIX = (process.env.WHEEL_DISCOUNT_PREFIX || 'EFTALIA').toUpperCase()
 const WHEEL_DISCOUNT_CODES = process.env.WHEEL_DISCOUNT_CODES || ''
 const WHEEL_DISCOUNT_PERCENTS = process.env.WHEEL_DISCOUNT_PERCENTS || '10,15,20,25,30'
+
+/** Native Shopify `returnRequest` için teslim satırı gerekir; kargo öncesi yalnızca müşteri metafield kaydı yapılır. */
+export const SHOPIFY_RETURN_NO_FULFILLMENT_LINES =
+  'Bu siparişte iade talebi açılabilecek teslim edilmiş ürün satırı bulunamadı. Sipariş henüz kargolanmamış olabilir.' as const
+
+export function isShopifyReturnNoFulfillmentError(message: string): boolean {
+  const m = String(message || '').trim()
+  return m === SHOPIFY_RETURN_NO_FULFILLMENT_LINES || m.includes('teslim edilmiş ürün satırı bulunamadı')
+}
+
+function describeShopifyAdminHttpError(status: number): string {
+  if (status === 401) {
+    return (
+      'Shopify Admin API erişimi reddedildi (401). SHOPIFY_ADMIN_ACCESS_TOKEN sunucuda yanlış, eksik veya geçersiz. ' +
+      "Shopify yönetim → Ayarlar → Uygulamalar ve satış kanalları → Geliştirme → özel uygulama → 'Admin API erişim belirteci'ni " +
+      'Vercel (veya hosting) ortam değişkenlerine ekleyin ve yeniden dağıtın. SHOPIFY_STORE_DOMAIN, https olmadan magaza.myshopify.com biçiminde olmalı.'
+    )
+  }
+  if (status === 403) {
+    return `Shopify Admin API izni yok (${status}). Özel uygulamada metafield yazımı / müşteri erişim izinlerini kontrol edin.`
+  }
+  return `Shopify Admin API yanıtı: HTTP ${status}`
+}
 
 const ACTIVE_DISCOUNT_CODES_QUERY = /* GraphQL */ `
   query ActiveDiscountCodes($first: Int!) {
@@ -263,8 +295,17 @@ function parseTicketList(raw: string | null | undefined): AdminServiceTicket[] {
     .filter((t): t is AdminServiceTicket => Boolean(t))
 }
 
-async function adminGraphqlFetch<T>(query: string, variables: Record<string, unknown>) {
-  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_ACCESS_TOKEN) return null
+type AdminGraphqlFetchResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; message: string; httpStatus?: number }
+
+async function adminGraphqlFetchDetailed<T>(
+  query: string,
+  variables: Record<string, unknown>
+): Promise<AdminGraphqlFetchResult<T>> {
+  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_ACCESS_TOKEN) {
+    return { ok: false, message: 'SHOPIFY_STORE_DOMAIN veya SHOPIFY_ADMIN_ACCESS_TOKEN eksik.' }
+  }
 
   const endpoint = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`
   const response = await fetch(endpoint, {
@@ -277,13 +318,49 @@ async function adminGraphqlFetch<T>(query: string, variables: Record<string, unk
     cache: 'no-store',
   })
 
-  if (!response.ok) return null
+  if (!response.ok) {
+    return {
+      ok: false,
+      httpStatus: response.status,
+      message: `Shopify Admin HTTP ${response.status}. Mağaza alanını (örn. magaza.myshopify.com, https’siz) ve Vercel ortam değişkenlerini kontrol edin.`,
+    }
+  }
+
   const json = (await response.json()) as {
     data?: T
     errors?: Array<{ message?: string }>
   }
-  if (json.errors?.length) return null
-  return json.data || null
+  if (json.errors?.length) {
+    const msg = json.errors
+      .map((e) => String(e?.message || '').trim())
+      .filter(Boolean)
+      .join(' | ')
+    return {
+      ok: false,
+      message:
+        msg ||
+        'Shopify GraphQL hatası. Admin özel uygulamasında read_customers ve müşteri metaalanları için gerekli izinler açık mı kontrol edin.',
+    }
+  }
+  if (json.data === undefined || json.data === null) {
+    return { ok: false, message: 'Shopify boş veri döndürdü.' }
+  }
+  return { ok: true, data: json.data }
+}
+
+async function adminGraphqlFetch<T>(query: string, variables: Record<string, unknown>) {
+  const result = await adminGraphqlFetchDetailed<T>(query, variables)
+  if (!result.ok) return null
+  return result.data
+}
+
+async function fetchCustomersWithRequestsPage(
+  after: string | null
+): Promise<AdminGraphqlFetchResult<CustomersWithRequestsData>> {
+  return adminGraphqlFetchDetailed<CustomersWithRequestsData>(CUSTOMERS_WITH_REQUESTS_QUERY, {
+    first: 40,
+    after,
+  })
 }
 
 function toRewardFromCode(code: string) {
@@ -396,7 +473,7 @@ async function adminRestFetch<T>(path: string, payload: unknown) {
   })
   const json = (await response.json().catch(() => null)) as T | null
   if (!response.ok) {
-    return { ok: false as const, error: `Admin API hatası: ${response.status}` }
+    return { ok: false as const, error: describeShopifyAdminHttpError(response.status) }
   }
   return { ok: true as const, data: json }
 }
@@ -534,7 +611,14 @@ export async function setCustomerJsonMetafieldAdmin(
     | null
 
   if (!response.ok) {
-    return { ok: false as const, error: `Shopify Admin API hatası: ${response.status}` }
+    const gqlErrors = (json?.errors || [])
+      .map((error) => String(error?.message || '').trim())
+      .filter(Boolean)
+    const base = describeShopifyAdminHttpError(response.status)
+    return {
+      ok: false as const,
+      error: gqlErrors.length ? `${base} — ${gqlErrors.join(' | ')}` : base,
+    }
   }
 
   const gqlErrors = (json?.errors || [])
@@ -597,7 +681,14 @@ export async function setCustomerSpinWheelRewardRaw(customerId: string, rawValue
     | null
 
   if (!response.ok) {
-    return { ok: false as const, error: `Admin API hatası: ${response.status}` }
+    const gqlErrors = (json?.errors || [])
+      .map((error) => String(error?.message || '').trim())
+      .filter(Boolean)
+    const base = describeShopifyAdminHttpError(response.status)
+    return {
+      ok: false as const,
+      error: gqlErrors.length ? `${base} — ${gqlErrors.join(' | ')}` : base,
+    }
   }
 
   const gqlErrors = (json?.errors || [])
@@ -679,8 +770,7 @@ export async function createShopifyReturnRequest(
   if (!returnLineItems.length) {
     return {
       ok: false,
-      error:
-        'Bu siparişte iade talebi açılabilecek teslim edilmiş ürün satırı bulunamadı. Sipariş henüz kargolanmamış olabilir.',
+      error: SHOPIFY_RETURN_NO_FULFILLMENT_LINES,
     }
   }
 
@@ -731,13 +821,22 @@ export async function listCustomerServiceRequestsAdmin(limit = 120): Promise<
   let after: string | null = null
 
   while (records.length < limit) {
-    const data: CustomersWithRequestsData | null = await adminGraphqlFetch<CustomersWithRequestsData>(
-      CUSTOMERS_WITH_REQUESTS_QUERY,
-      { first: 40, after }
-    )
+    const fetched = await fetchCustomersWithRequestsPage(after)
 
+    if (!fetched.ok) {
+      return {
+        ok: false,
+        error: `Talepler okunamadı: ${fetched.message}`,
+      }
+    }
+
+    const data = fetched.data
     if (!data?.customers) {
-      return { ok: false, error: 'Shopify müşteri talepleri okunamadı.' }
+      return {
+        ok: false,
+        error:
+          'Shopify “customers” sorgusu veri döndürmedi. Admin token izinlerini (read_customers) ve mağaza alan adını kontrol edin.',
+      }
     }
 
     const edges = data.customers.edges || []

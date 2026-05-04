@@ -130,11 +130,17 @@ export function AccountServiceRequestsPanel({ kind, title, intro, orders, ticket
           note,
         }),
       })
-      const data = (await response.json()) as { error?: string }
+      const data = (await response.json()) as { error?: string; metafieldOnlyReturn?: boolean }
       if (!response.ok) {
         throw new Error(data?.error || 'Talep gönderilemedi.')
       }
-      setSuccess('Talebiniz kaydedildi. Ekibimiz Shopify sipariş numaranız üzerinden süreci yönetecek.')
+      if (data.metafieldOnlyReturn) {
+        setSuccess(
+          'Talebiniz kaydedildi. Sipariş henüz kargoya çıkmadığı veya teslim satırı oluşmadığı için Shopify’da otomatik iade kaydı açılmadı; ekibimiz talebi mağaza panelinden sürdürecek.'
+        )
+      } else {
+        setSuccess('Talebiniz kaydedildi. Ekibimiz Shopify sipariş numaranız üzerinden süreci yönetecek.')
+      }
       setNote('')
       setReason('')
       const params = new URLSearchParams(searchParams.toString())
