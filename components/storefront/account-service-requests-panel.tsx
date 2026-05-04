@@ -13,6 +13,8 @@ export type ServiceTicket = {
   note?: string
   status: string
   createdAt: string
+  shopifyReturnId?: string
+  shopifyReturnName?: string
 }
 
 const RETURN_REASON_OPTIONS = [
@@ -274,6 +276,11 @@ export function AccountServiceRequestsPanel({ kind, title, intro, orders, ticket
                   <p className="mt-2 text-sm text-[#6d4f35]">
                     <span className="font-medium text-[#4d3523]">Neden:</span> {t.reason}
                   </p>
+                  {kind === 'return' && (t.shopifyReturnName || t.shopifyReturnId) ? (
+                    <p className="mt-1 text-xs text-[#8a6b4b]">
+                      Shopify iade kaydı: {t.shopifyReturnName || t.shopifyReturnId}
+                    </p>
+                  ) : null}
                   {t.note ? (
                     <p className="mt-1 text-sm text-[#7d5f45]">
                       <span className="font-medium text-[#4d3523]">Not:</span> {t.note}

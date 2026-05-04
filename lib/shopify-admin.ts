@@ -74,6 +74,195 @@ const CUSTOMER_SPIN_REWARD_QUERY = /* GraphQL */ `
   }
 `
 
+const ORDER_FULFILLMENT_LINE_ITEMS_QUERY = /* GraphQL */ `
+  query OrderForReturnRequest($id: ID!) {
+    order(id: $id) {
+      id
+      name
+      fulfillments(first: 20) {
+        nodes {
+          fulfillmentLineItems(first: 100) {
+            nodes {
+              id
+              quantity
+            }
+          }
+        }
+      }
+    }
+  }
+`
+
+const RETURN_REQUEST_MUTATION = /* GraphQL */ `
+  mutation ReturnRequest($input: ReturnRequestInput!) {
+    returnRequest(input: $input) {
+      return {
+        id
+        name
+        status
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`
+
+const RETURN_APPROVE_REQUEST_MUTATION = /* GraphQL */ `
+  mutation ReturnApproveRequest($input: ReturnApproveRequestInput!) {
+    returnApproveRequest(input: $input) {
+      return {
+        id
+        status
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`
+
+const RETURN_DECLINE_REQUEST_MUTATION = /* GraphQL */ `
+  mutation ReturnDeclineRequest($input: ReturnDeclineRequestInput!) {
+    returnDeclineRequest(input: $input) {
+      returnDecline {
+        id
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`
+
+const ORDER_CANCEL_MUTATION = /* GraphQL */ `
+  mutation OrderCancel($orderId: ID!, $reason: OrderCancelReason!, $restock: Boolean!, $notifyCustomer: Boolean!) {
+    orderCancel(orderId: $orderId, reason: $reason, restock: $restock, notifyCustomer: $notifyCustomer) {
+      job {
+        id
+        done
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`
+
+const CUSTOMERS_WITH_REQUESTS_QUERY = /* GraphQL */ `
+  query CustomersWithRequests($first: Int!, $after: String) {
+    customers(first: $first, after: $after, query: "metafield:custom.return_requests:* OR metafield:custom.cancel_requests:*") {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        node {
+          id
+          firstName
+          lastName
+          email
+          returnRequests: metafield(namespace: "custom", key: "return_requests") {
+            value
+          }
+          cancelRequests: metafield(namespace: "custom", key: "cancel_requests") {
+            value
+          }
+        }
+      }
+    }
+  }
+`
+
+const CUSTOMER_REQUEST_METAFIELDS_QUERY = /* GraphQL */ `
+  query CustomerRequestMetafields($id: ID!) {
+    customer(id: $id) {
+      id
+      firstName
+      lastName
+      email
+      returnRequests: metafield(namespace: "custom", key: "return_requests") {
+        value
+      }
+      cancelRequests: metafield(namespace: "custom", key: "cancel_requests") {
+        value
+      }
+    }
+  }
+`
+
+type AdminServiceTicket = {
+  id: string
+  orderId: string
+  orderNumber: number
+  reason: string
+  note?: string
+  status: string
+  createdAt: string
+  shopifyReturnId?: string
+  shopifyReturnName?: string
+}
+
+type CustomerRequestRecord = {
+  customerId: string
+  customerName: string
+  customerEmail: string
+  kind: 'return' | 'cancel'
+  ticket: AdminServiceTicket
+}
+
+type CustomersWithRequestsData = {
+  customers?: {
+    pageInfo?: { hasNextPage?: boolean; endCursor?: string | null } | null
+    edges?: Array<{
+      node?: {
+        id?: string | null
+        firstName?: string | null
+        lastName?: string | null
+        email?: string | null
+        returnRequests?: { value?: string | null } | null
+        cancelRequests?: { value?: string | null } | null
+      } | null
+    } | null>
+  } | null
+}
+
+function parseTicketList(raw: string | null | undefined): AdminServiceTicket[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(String(raw || '[]'))
+  } catch {
+    return []
+  }
+  if (!Array.isArray(parsed)) return []
+  return parsed
+    .map((entry): AdminServiceTicket | null => {
+      if (!entry || typeof entry !== 'object') return null
+      const t = entry as Record<string, unknown>
+      const orderId = String(t.orderId || '').trim()
+      const orderNumber = Number(t.orderNumber)
+      const reason = String(t.reason || '').trim()
+      const createdAt = String(t.createdAt || '').trim()
+      if (!orderId || !Number.isFinite(orderNumber) || !reason || !createdAt) return null
+      return {
+        id: String(t.id || `${orderId}:${createdAt}`).trim(),
+        orderId,
+        orderNumber,
+        reason,
+        note: String(t.note || '').trim() || undefined,
+        status: String(t.status || 'beklemede').trim() || 'beklemede',
+        createdAt,
+        shopifyReturnId: String(t.shopifyReturnId || '').trim() || undefined,
+        shopifyReturnName: String(t.shopifyReturnName || '').trim() || undefined,
+      }
+    })
+    .filter((t): t is AdminServiceTicket => Boolean(t))
+}
+
 async function adminGraphqlFetch<T>(query: string, variables: Record<string, unknown>) {
   if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_ACCESS_TOKEN) return null
 
@@ -441,4 +630,237 @@ export async function getCustomerSpinWheelRewardRaw(customerId: string) {
     ok: true as const,
     rawValue: String(data?.customer?.metafield?.value || ''),
   }
+}
+
+export async function createShopifyReturnRequest(
+  orderId: string,
+  customerNote?: string
+): Promise<{ ok: true; returnId: string; returnName: string } | { ok: false; error: string }> {
+  const normalizedOrderId = String(orderId || '').trim()
+  if (!normalizedOrderId) {
+    return { ok: false, error: 'Sipariş kimliği eksik.' }
+  }
+  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_ACCESS_TOKEN) {
+    return {
+      ok: false,
+      error:
+        'SHOPIFY_ADMIN_ACCESS_TOKEN tanımlı değil. Native Shopify iade talebi açmak için Admin API gerekir.',
+    }
+  }
+
+  const orderData = await adminGraphqlFetch<{
+    order?: {
+      id?: string | null
+      name?: string | null
+      fulfillments?: {
+        nodes?: Array<{
+          fulfillmentLineItems?: {
+            nodes?: Array<{ id?: string | null; quantity?: number | null } | null> | null
+          } | null
+        } | null>
+      } | null
+    } | null
+  }>(ORDER_FULFILLMENT_LINE_ITEMS_QUERY, { id: normalizedOrderId })
+
+  const nodes = orderData?.order?.fulfillments?.nodes || []
+  const returnLineItems = nodes
+    .flatMap((fulfillment) => fulfillment?.fulfillmentLineItems?.nodes || [])
+    .map((line) => {
+      const id = String(line?.id || '').trim()
+      const qty = Number(line?.quantity || 0)
+      if (!id || !Number.isFinite(qty) || qty <= 0) return null
+      return {
+        fulfillmentLineItemId: id,
+        quantity: Math.max(1, Math.floor(qty)),
+      }
+    })
+    .filter(Boolean) as Array<{ fulfillmentLineItemId: string; quantity: number }>
+
+  if (!returnLineItems.length) {
+    return {
+      ok: false,
+      error:
+        'Bu siparişte iade talebi açılabilecek teslim edilmiş ürün satırı bulunamadı. Sipariş henüz kargolanmamış olabilir.',
+    }
+  }
+
+  const data = await adminGraphqlFetch<{
+    returnRequest?: {
+      return?: { id?: string | null; name?: string | null } | null
+      userErrors?: Array<{ message?: string | null } | null>
+    } | null
+  }>(RETURN_REQUEST_MUTATION, {
+    input: {
+      orderId: normalizedOrderId,
+      returnLineItems: returnLineItems.map((line) => ({
+        ...line,
+        ...(customerNote ? { customerNote: String(customerNote).slice(0, 300) } : {}),
+      })),
+    },
+  })
+
+  if (!data?.returnRequest) {
+    return { ok: false, error: 'Shopify iade talebi oluşturulamadı.' }
+  }
+
+  const userErrors = (data.returnRequest.userErrors || [])
+    .map((e) => String(e?.message || '').trim())
+    .filter(Boolean)
+  if (userErrors.length) {
+    return { ok: false, error: userErrors.join(' | ') }
+  }
+
+  const returnId = String(data.returnRequest.return?.id || '').trim()
+  const returnName = String(data.returnRequest.return?.name || '').trim()
+  if (!returnId) {
+    return { ok: false, error: 'Shopify iade talebi yanıtında iade kimliği bulunamadı.' }
+  }
+
+  return { ok: true, returnId, returnName: returnName || returnId }
+}
+
+export async function listCustomerServiceRequestsAdmin(limit = 120): Promise<
+  | { ok: true; records: CustomerRequestRecord[] }
+  | { ok: false; error: string }
+> {
+  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_ACCESS_TOKEN) {
+    return { ok: false, error: 'SHOPIFY_ADMIN_ACCESS_TOKEN eksik veya geçersiz.' }
+  }
+
+  const records: CustomerRequestRecord[] = []
+  let after: string | null = null
+
+  while (records.length < limit) {
+    const data: CustomersWithRequestsData | null = await adminGraphqlFetch<CustomersWithRequestsData>(
+      CUSTOMERS_WITH_REQUESTS_QUERY,
+      { first: 40, after }
+    )
+
+    if (!data?.customers) {
+      return { ok: false, error: 'Shopify müşteri talepleri okunamadı.' }
+    }
+
+    const edges = data.customers.edges || []
+    for (const edge of edges) {
+      const node = edge?.node
+      const customerId = String(node?.id || '').trim()
+      if (!customerId) continue
+      const customerName = [node?.firstName, node?.lastName].filter(Boolean).join(' ').trim() || 'Müşteri'
+      const customerEmail = String(node?.email || '').trim()
+
+      const returnTickets = parseTicketList(node?.returnRequests?.value)
+      const cancelTickets = parseTicketList(node?.cancelRequests?.value)
+
+      for (const ticket of returnTickets) {
+        records.push({ customerId, customerName, customerEmail, kind: 'return', ticket })
+      }
+      for (const ticket of cancelTickets) {
+        records.push({ customerId, customerName, customerEmail, kind: 'cancel', ticket })
+      }
+
+      if (records.length >= limit) break
+    }
+
+    if (records.length >= limit) break
+    if (!data.customers.pageInfo?.hasNextPage) break
+    after = String(data.customers.pageInfo?.endCursor || '')
+    if (!after) break
+  }
+
+  records.sort((a, b) => new Date(b.ticket.createdAt).getTime() - new Date(a.ticket.createdAt).getTime())
+  return { ok: true, records: records.slice(0, limit) }
+}
+
+export async function getCustomerRequestMetafieldsAdmin(customerId: string): Promise<
+  | {
+      ok: true
+      customer: {
+        id: string
+        firstName: string
+        lastName: string
+        email: string
+        returnTickets: AdminServiceTicket[]
+        cancelTickets: AdminServiceTicket[]
+      }
+    }
+  | { ok: false; error: string }
+> {
+  const id = String(customerId || '').trim()
+  if (!id) return { ok: false, error: 'Müşteri kimliği eksik.' }
+  const data = await adminGraphqlFetch<{
+    customer?: {
+      id?: string | null
+      firstName?: string | null
+      lastName?: string | null
+      email?: string | null
+      returnRequests?: { value?: string | null } | null
+      cancelRequests?: { value?: string | null } | null
+    } | null
+  }>(CUSTOMER_REQUEST_METAFIELDS_QUERY, { id })
+
+  const c = data?.customer
+  if (!c?.id) return { ok: false, error: 'Müşteri bulunamadı.' }
+
+  return {
+    ok: true,
+    customer: {
+      id: String(c.id),
+      firstName: String(c.firstName || ''),
+      lastName: String(c.lastName || ''),
+      email: String(c.email || ''),
+      returnTickets: parseTicketList(c.returnRequests?.value),
+      cancelTickets: parseTicketList(c.cancelRequests?.value),
+    },
+  }
+}
+
+export async function approveShopifyReturnRequest(returnId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const id = String(returnId || '').trim()
+  if (!id) return { ok: false, error: 'Shopify iade kimliği yok.' }
+  const data = await adminGraphqlFetch<{
+    returnApproveRequest?: { userErrors?: Array<{ message?: string | null } | null> | null } | null
+  }>(RETURN_APPROVE_REQUEST_MUTATION, { input: { id, notifyCustomer: true } })
+  if (!data?.returnApproveRequest) return { ok: false, error: 'İade onaylanamadı.' }
+  const errors = (data.returnApproveRequest.userErrors || []).map((e) => String(e?.message || '').trim()).filter(Boolean)
+  if (errors.length) return { ok: false, error: errors.join(' | ') }
+  return { ok: true }
+}
+
+export async function declineShopifyReturnRequest(
+  returnId: string,
+  declineNote?: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const id = String(returnId || '').trim()
+  if (!id) return { ok: false, error: 'Shopify iade kimliği yok.' }
+  const data = await adminGraphqlFetch<{
+    returnDeclineRequest?: { userErrors?: Array<{ message?: string | null } | null> | null } | null
+  }>(RETURN_DECLINE_REQUEST_MUTATION, {
+    input: {
+      id,
+      declineReason: 'OTHER',
+      ...(declineNote ? { declineNote: String(declineNote).slice(0, 500) } : {}),
+      notifyCustomer: true,
+    },
+  })
+  if (!data?.returnDeclineRequest) return { ok: false, error: 'İade reddedilemedi.' }
+  const errors = (data.returnDeclineRequest.userErrors || []).map((e) => String(e?.message || '').trim()).filter(Boolean)
+  if (errors.length) return { ok: false, error: errors.join(' | ') }
+  return { ok: true }
+}
+
+export async function cancelShopifyOrderAndNotify(orderId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const id = String(orderId || '').trim()
+  if (!id) return { ok: false, error: 'Sipariş kimliği yok.' }
+  const data = await adminGraphqlFetch<{
+    orderCancel?: { userErrors?: Array<{ message?: string | null } | null> | null } | null
+  }>(ORDER_CANCEL_MUTATION, {
+    orderId: id,
+    reason: 'CUSTOMER',
+    restock: true,
+    notifyCustomer: true,
+  })
+  if (!data?.orderCancel) return { ok: false, error: 'Sipariş iptal edilemedi.' }
+  const errors = (data.orderCancel.userErrors || []).map((e) => String(e?.message || '').trim()).filter(Boolean)
+  if (errors.length) return { ok: false, error: errors.join(' | ') }
+  return { ok: true }
 }

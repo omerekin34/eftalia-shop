@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import type { AccountOrder } from '@/components/storefront/account-orders-section'
 import type { ServiceTicket } from '@/components/storefront/account-service-requests-panel'
-import { setCustomerJsonMetafieldAdmin } from '@/lib/shopify-admin'
+import { createShopifyReturnRequest, setCustomerJsonMetafieldAdmin } from '@/lib/shopify-admin'
 import { getCustomerDetails, getCustomerOrders } from '@/lib/shopify'
 
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
@@ -110,6 +110,25 @@ export async function POST(request: Request) {
       ...(note ? { note } : {}),
       status: 'beklemede',
       createdAt: new Date().toISOString(),
+    } as ServiceTicket & { shopifyReturnId?: string; shopifyReturnName?: string }
+
+    if (type === 'return') {
+      const nativeReturn = await createShopifyReturnRequest(
+        orderId,
+        `${reason}${note ? ` — ${note}` : ''}`
+      )
+      if (!nativeReturn.ok) {
+        return NextResponse.json(
+          {
+            error:
+              'Shopify iade talebi oluşturulamadı. Lütfen tekrar deneyin veya destek ile iletişime geçin. Teknik detay: ' +
+              nativeReturn.error,
+          },
+          { status: 400 }
+        )
+      }
+      ticket.shopifyReturnId = nativeReturn.returnId
+      ticket.shopifyReturnName = nativeReturn.returnName
     }
 
     list.push(ticket)
