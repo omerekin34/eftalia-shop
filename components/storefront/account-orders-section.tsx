@@ -3,10 +3,12 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import {
+  Ban,
   Calendar,
   ExternalLink,
   MapPin,
   Package,
+  RotateCcw,
   Sparkles,
   Truck,
 } from 'lucide-react'
@@ -96,7 +98,15 @@ function financialLabel(status?: string | null) {
   return map[s] || (status ? status.replace(/_/g, ' ') : '')
 }
 
-export function AccountOrdersSection({ orders }: { orders: AccountOrder[] }) {
+export function AccountOrdersSection({
+  orders,
+  onReturnRequest,
+  onCancelRequest,
+}: {
+  orders: AccountOrder[]
+  onReturnRequest?: (order: AccountOrder) => void
+  onCancelRequest?: (order: AccountOrder) => void
+}) {
   if (!orders.length) {
     return (
       <div className="rounded-2xl border border-dashed border-[#9b7a57]/30 bg-gradient-to-br from-white via-[#fffdf9] to-[#f8efe1] p-8 text-[#7d5f45] shadow-[0_24px_60px_-48px_rgba(83,58,39,0.35)]">
@@ -142,6 +152,11 @@ export function AccountOrdersSection({ orders }: { orders: AccountOrder[] }) {
           <p className="mt-1 max-w-xl text-sm text-[#7d5f45]">
             {orders.length} sipariş listeleniyor. Teslimat özeti, ürün görselleri ve Shopify güvenli sipariş takibi.
           </p>
+          {(onReturnRequest || onCancelRequest) && (
+            <p className="mt-2 text-xs text-[#8a6b4b]">
+              İade veya iptal için sipariş kartındaki kısayolları veya hesap menüsündeki talep sayfalarını kullanın.
+            </p>
+          )}
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-[#9b7a57]/25 bg-white/80 px-4 py-2 text-xs font-medium text-[#6d4f35] shadow-sm">
           <Sparkles className="h-3.5 w-3.5 text-[#b8956a]" />
@@ -248,20 +263,44 @@ export function AccountOrdersSection({ orders }: { orders: AccountOrder[] }) {
                         {formatMoney(order?.totalPrice?.amount, order?.totalPrice?.currencyCode)}
                       </p>
                     </div>
-                    {order.statusUrl ? (
-                      <a
-                        href={order.statusUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#5B1F2A] px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-white shadow-[0_12px_24px_-14px_rgba(91,31,42,0.55)] transition-colors hover:bg-[#4a1822]"
-                      >
-                        <Truck className="h-4 w-4 shrink-0" />
-                        Sipariş takibi
-                        <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                      </a>
-                    ) : (
-                      <p className="text-center text-xs text-[#8a6b4b]">Takip bağlantısı bu sipariş için kullanılamıyor.</p>
-                    )}
+                    <div className="flex flex-col gap-2">
+                      {order.statusUrl ? (
+                        <a
+                          href={order.statusUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#5B1F2A] px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-white shadow-[0_12px_24px_-14px_rgba(91,31,42,0.55)] transition-colors hover:bg-[#4a1822]"
+                        >
+                          <Truck className="h-4 w-4 shrink-0" />
+                          Sipariş takibi
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                        </a>
+                      ) : (
+                        <p className="text-center text-xs text-[#8a6b4b]">
+                          Takip bağlantısı bu sipariş için kullanılamıyor.
+                        </p>
+                      )}
+                      {onReturnRequest ? (
+                        <button
+                          type="button"
+                          onClick={() => onReturnRequest(order)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#9b7a57]/35 bg-white px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-[#5B1F2A] transition-colors hover:bg-[#fff9ef]"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+                          İade talebi
+                        </button>
+                      ) : null}
+                      {onCancelRequest ? (
+                        <button
+                          type="button"
+                          onClick={() => onCancelRequest(order)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200/80 bg-rose-50/90 px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-rose-900 transition-colors hover:bg-rose-100"
+                        >
+                          <Ban className="h-3.5 w-3.5 shrink-0" />
+                          İptal talebi
+                        </button>
+                      ) : null}
+                    </div>
                   </aside>
                 </div>
               </article>

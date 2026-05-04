@@ -8,6 +8,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { AccountSidebar, type AccountNavTabKey } from '@/components/storefront/account-sidebar'
 import { TurkiyeIlIlceFields } from '@/components/storefront/turkiye-il-ilce-fields'
 import { AccountOrdersSection, type AccountOrder } from '@/components/storefront/account-orders-section'
+import {
+  AccountServiceRequestsPanel,
+  type ServiceTicket,
+} from '@/components/storefront/account-service-requests-panel'
 import { useFavorites } from '@/components/storefront/favorites-context'
 
 type CustomerAddress = {
@@ -31,6 +35,8 @@ type CustomerDetails = {
   phone?: string
   addresses?: CustomerAddress[]
   spinWheelRewardRaw?: string
+  returnTickets?: ServiceTicket[]
+  cancelTickets?: ServiceTicket[]
 }
 
 type TabKey = AccountNavTabKey
@@ -78,6 +84,8 @@ const dashboardCards: Array<{
 
 function getTabFromParam(value: string | null): TabKey {
   if (value === 'orders') return 'orders'
+  if (value === 'returns') return 'returns'
+  if (value === 'cancellations') return 'cancellations'
   if (value === 'favorites') return 'favorites'
   if (value === 'coupons') return 'coupons'
   if (value === 'addresses') return 'addresses'
@@ -95,6 +103,9 @@ export function AccountDashboardClient({
   const searchParams = useSearchParams()
   const router = useRouter()
   const { favorites, removeFavorite } = useFavorites()
+
+  const returnTickets = customer.returnTickets ?? []
+  const cancelTickets = customer.cancelTickets ?? []
 
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard')
   const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -499,8 +510,36 @@ export function AccountDashboardClient({
 
           {activeTab === 'orders' && (
             <div>
-              <AccountOrdersSection orders={orders} />
+              <AccountOrdersSection
+                orders={orders}
+                onReturnRequest={(o) =>
+                  router.push(`/account?tab=returns&order=${encodeURIComponent(String(o.orderNumber))}`)
+                }
+                onCancelRequest={(o) =>
+                  router.push(`/account?tab=cancellations&order=${encodeURIComponent(String(o.orderNumber))}`)
+                }
+              />
             </div>
+          )}
+
+          {activeTab === 'returns' && (
+            <AccountServiceRequestsPanel
+              kind="return"
+              title="İade taleplerim"
+              intro="Ürün iadesi için talep oluşturun. Talepler hesabınızda saklanır; ekibimiz Shopify’daki sipariş numaranızla süreci yürütür. Onay sonrası iade koşulları için İade Politikası sayfamıza bakabilirsiniz."
+              orders={orders}
+              tickets={returnTickets}
+            />
+          )}
+
+          {activeTab === 'cancellations' && (
+            <AccountServiceRequestsPanel
+              kind="cancel"
+              title="İptal taleplerim"
+              intro="Henüz kargoya verilmemiş veya destek gerektiren iptaller için talep bırakın. Kesin iptal ve ödeme iadesi mağaza politikasına ve sipariş durumuna göre Shopify üzerinden tamamlanır."
+              orders={orders}
+              tickets={cancelTickets}
+            />
           )}
 
           {activeTab === 'profile' && (
