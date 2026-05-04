@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import type { AccountOrder } from '@/components/storefront/account-orders-section'
 import type { ServiceTicket } from '@/components/storefront/account-service-requests-panel'
-import { getCustomerDetails, getCustomerOrders, setCustomerTicketMetafield } from '@/lib/shopify'
+import { setCustomerJsonMetafieldAdmin } from '@/lib/shopify-admin'
+import { getCustomerDetails, getCustomerOrders } from '@/lib/shopify'
 
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
 
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
     }
 
     const [details, orders] = await Promise.all([getCustomerDetails(token), getCustomerOrders(token)])
-    if (!details) {
+    if (!details?.id) {
       return NextResponse.json({ error: 'Hesap bilgisi alınamadı.' }, { status: 401 })
     }
 
@@ -114,7 +115,10 @@ export async function POST(request: Request) {
     list.push(ticket)
 
     const key = type === 'cancel' ? 'cancel_requests' : 'return_requests'
-    await setCustomerTicketMetafield(token, key, list)
+    const save = await setCustomerJsonMetafieldAdmin(details.id, key, list)
+    if (!save.ok) {
+      return NextResponse.json({ error: save.error }, { status: 400 })
+    }
 
     return NextResponse.json({ ok: true, ticket })
   } catch (error) {

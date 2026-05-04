@@ -169,10 +169,8 @@ export function AccountServiceRequestsPanel({ kind, title, intro, orders, ticket
           Yeni talep oluştur
         </h3>
         <p className="mt-1 text-xs text-[#8a6b4b]">
-          Talepler hesabınızda güvenli şekilde saklanır; mağaza ekibi Shopify yönetiminde sipariş numaranızla işlem
-          yapar. Gönderim hata verirse genelde sebep: Shopify’da müşteri metafield tanımları (custom.return_requests /
-          cancel_requests, JSON) veya Storefront yazma izni eksiktir — hata mesajı artık buna göre daha açıklayıcı
-          gösterilir.
+          Talepler güvenli şekilde Shopify müşteri kaydınıza JSON olarak yazılır; ekibimiz sipariş numaranız üzerinden
+          süreci yürütür. Sunucuda tanımlı <strong>Admin API</strong> anahtarı ve müşteri metafield tanımları gerekir.
         </p>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 grid gap-4 sm:grid-cols-2">

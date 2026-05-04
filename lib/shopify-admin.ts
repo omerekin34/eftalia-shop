@@ -286,6 +286,85 @@ export async function createCustomerScopedWheelDiscount(customerGid: string, per
   }
 }
 
+/** Storefront `customerUpdate` cannot write customer metafields; use Admin metafieldsSet (same as spin wheel). */
+export async function setCustomerJsonMetafieldAdmin(
+  customerGid: string,
+  key: 'return_requests' | 'cancel_requests',
+  value: unknown
+) {
+  const ownerId = String(customerGid || '').trim()
+  if (!ownerId) return { ok: false as const, error: 'Müşteri kimliği yok.' }
+  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_ACCESS_TOKEN) {
+    return {
+      ok: false as const,
+      error:
+        'SHOPIFY_ADMIN_ACCESS_TOKEN tanımlı değil. İade/iptal talepleri için Admin API ile müşteri metafield yazımı gerekir.',
+    }
+  }
+
+  let rawValue: string
+  try {
+    rawValue = JSON.stringify(value)
+  } catch {
+    return { ok: false as const, error: 'Veri JSON olarak kaydedilemedi.' }
+  }
+
+  const endpoint = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': SHOPIFY_ADMIN_ACCESS_TOKEN,
+    },
+    body: JSON.stringify({
+      query: METAFIELDS_SET_MUTATION,
+      variables: {
+        metafields: [
+          {
+            ownerId,
+            namespace: 'custom',
+            key,
+            type: 'json',
+            value: rawValue,
+          },
+        ],
+      },
+    }),
+    cache: 'no-store',
+  })
+
+  const json = (await response.json().catch(() => null)) as
+    | {
+        errors?: Array<{ message?: string | null } | null>
+        data?: {
+          metafieldsSet?: {
+            userErrors?: Array<{ message?: string | null } | null>
+          }
+        }
+      }
+    | null
+
+  if (!response.ok) {
+    return { ok: false as const, error: `Shopify Admin API hatası: ${response.status}` }
+  }
+
+  const gqlErrors = (json?.errors || [])
+    .map((error) => String(error?.message || '').trim())
+    .filter(Boolean)
+  if (gqlErrors.length) {
+    return { ok: false as const, error: gqlErrors.join(' | ') }
+  }
+
+  const userErrors = (json?.data?.metafieldsSet?.userErrors || [])
+    .map((error) => String(error?.message || '').trim())
+    .filter(Boolean)
+  if (userErrors.length) {
+    return { ok: false as const, error: userErrors.join(' | ') }
+  }
+
+  return { ok: true as const }
+}
+
 export async function setCustomerSpinWheelRewardRaw(customerId: string, rawValue: string) {
   const ownerId = String(customerId || '').trim()
   if (!ownerId) return { ok: false as const, error: 'Geçersiz müşteri kimliği.' }
