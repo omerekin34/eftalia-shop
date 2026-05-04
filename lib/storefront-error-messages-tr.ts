@@ -68,6 +68,23 @@ const SUBSTRING_RULES: Array<{ match: (s: string) => boolean; tr: string }> = [
       (s.includes('shopify') && s.includes('env vars')),
     tr: 'Sunucu yapılandırması eksik: Shopify alan adı veya erişim anahtarı tanımlı değil.',
   },
+  {
+    match: (s) =>
+      s.includes('metafield') ||
+      s.includes('definition') ||
+      s.includes('must have a definition') ||
+      s.includes('metafielddefinition') ||
+      s.includes('invalid metafield') ||
+      s.includes('unknown metafield') ||
+      (s.includes('does not exist') && s.includes('metafield')),
+    tr: 'Shopify tarafında müşteri metafield tanımı eksik veya izin yok. Admin → Ayarlar → Özel veriler → Müşteriler: namespace "custom" altında "return_requests" ve "cancel_requests" için JSON tipinde tanımlar oluşturun; ardından Storefront erişiminde bu alanların yazılabilir olduğundan emin olun.',
+  },
+  {
+    match: (s) =>
+      s.includes('access') &&
+      (s.includes('denied') || s.includes('forbidden') || s.includes('not allowed')),
+    tr: 'Bu işlem için mağaza API izinleri yetersiz. Storefront erişim anahtarınızın müşteri güncellemesi ve metafield yazımına izin verdiğini kontrol edin.',
+  },
 ]
 
 function translateOne(raw: string): string {

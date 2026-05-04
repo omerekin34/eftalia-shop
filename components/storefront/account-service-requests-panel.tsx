@@ -170,7 +170,9 @@ export function AccountServiceRequestsPanel({ kind, title, intro, orders, ticket
         </h3>
         <p className="mt-1 text-xs text-[#8a6b4b]">
           Talepler hesabınızda güvenli şekilde saklanır; mağaza ekibi Shopify yönetiminde sipariş numaranızla işlem
-          yapar.
+          yapar. Gönderim hata verirse genelde sebep: Shopify’da müşteri metafield tanımları (custom.return_requests /
+          cancel_requests, JSON) veya Storefront yazma izni eksiktir — hata mesajı artık buna göre daha açıklayıcı
+          gösterilir.
         </p>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 grid gap-4 sm:grid-cols-2">
