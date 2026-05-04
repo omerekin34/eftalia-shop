@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, LogIn, UserPlus, ShieldCheck, Truck, RotateCcw } from 'lucide-react'
+import { Eye, EyeOff, LogIn, UserPlus, ShieldCheck, Truck, RotateCcw, Mail } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
 
@@ -38,6 +38,9 @@ function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [recoverSuccessMessage, setRecoverSuccessMessage] = useState('')
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
+  const [recoverSubmitting, setRecoverSubmitting] = useState(false)
   const [acceptsPolicies, setAcceptsPolicies] = useState(false)
   const googleButtonRef = useRef<HTMLDivElement | null>(null)
   const [form, setForm] = useState({
@@ -115,9 +118,38 @@ function LoginPageContent() {
     document.head.appendChild(script)
   }, [acceptsPolicies, mode, router])
 
+  const handleRecoverPassword = async () => {
+    setErrorMessage('')
+    setRecoverSuccessMessage('')
+    const email = form.email.trim()
+    if (!email) {
+      setErrorMessage('Şifre sıfırlaması için yukarıdaki e-posta alanını doldurun.')
+      return
+    }
+    setRecoverSubmitting(true)
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = (await response.json()) as { error?: string; message?: string }
+      if (!response.ok) {
+        throw new Error(data?.error || 'İstek gönderilemedi.')
+      }
+      setRecoverSuccessMessage(data?.message || 'İşlem tamamlandı.')
+      setForgotPasswordOpen(false)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'İstek gönderilemedi.')
+    } finally {
+      setRecoverSubmitting(false)
+    }
+  }
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setErrorMessage('')
+    setRecoverSuccessMessage('')
     if (mode === 'register' && !acceptsPolicies) {
       setErrorMessage('Üyelik için politika metinlerini kabul etmelisiniz.')
       return
@@ -187,6 +219,8 @@ function LoginPageContent() {
                   onClick={() => {
                     setMode('login')
                     setErrorMessage('')
+                    setRecoverSuccessMessage('')
+                    setForgotPasswordOpen(false)
                   }}
                   className={`flex-1 rounded-full px-4 py-2.5 text-sm font-medium transition-all ${
                     mode === 'login'
@@ -200,6 +234,8 @@ function LoginPageContent() {
                   onClick={() => {
                     setMode('register')
                     setErrorMessage('')
+                    setRecoverSuccessMessage('')
+                    setForgotPasswordOpen(false)
                   }}
                   className={`flex-1 rounded-full px-4 py-2.5 text-sm font-medium transition-all ${
                     mode === 'register'
@@ -301,6 +337,36 @@ function LoginPageContent() {
                   </div>
                 </div>
 
+                {mode === 'login' && forgotPasswordOpen ? (
+                  <div className="space-y-3 rounded-lg border border-bronze/25 bg-ivory-warm/80 p-4">
+                    <p className="text-sm leading-relaxed text-bronze/80">
+                      Bu adres hesabınızda kayıtlıysa, şifre sıfırlama bağlantısı e-postanıza gönderilir. Önce
+                      yukarıdaki e-posta alanını doldurun, ardından gönderin.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleRecoverPassword()}
+                        disabled={recoverSubmitting}
+                        className="inline-flex items-center gap-2 rounded-lg bg-bronze px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-bronze-dark disabled:opacity-60"
+                      >
+                        <Mail className="h-4 w-4" />
+                        {recoverSubmitting ? 'Gönderiliyor...' : 'Sıfırlama bağlantısı gönder'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotPasswordOpen(false)
+                          setErrorMessage('')
+                        }}
+                        className="rounded-lg border border-bronze/25 px-4 py-2.5 text-sm font-medium text-bronze transition-colors hover:bg-white"
+                      >
+                        Kapat
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
                 {mode === 'register' && (
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-bronze">
@@ -344,6 +410,12 @@ function LoginPageContent() {
                   </div>
                 )}
 
+                {recoverSuccessMessage ? (
+                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                    {recoverSuccessMessage}
+                  </p>
+                ) : null}
+
                 {errorMessage ? (
                   <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                     {errorMessage}
@@ -358,9 +430,15 @@ function LoginPageContent() {
                   {mode === 'login' && (
                     <button
                       type="button"
-                      className="text-sm font-medium text-bronze/70 underline-offset-4 transition-colors hover:text-bronze hover:underline"
+                      onClick={() => {
+                        setForgotPasswordOpen((open) => !open)
+                        setErrorMessage('')
+                      }}
+                      className={`text-sm font-medium underline-offset-4 transition-colors hover:underline ${
+                        forgotPasswordOpen ? 'text-bronze' : 'text-bronze/70 hover:text-bronze'
+                      }`}
                     >
-                      Şifremi unuttum
+                      {forgotPasswordOpen ? 'Şifre sıfırlamayı kapat' : 'Şifremi unuttum'}
                     </button>
                   )}
                 </div>

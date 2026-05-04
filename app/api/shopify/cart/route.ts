@@ -11,13 +11,13 @@ export async function GET(request: NextRequest) {
   try {
     const cartId = request.nextUrl.searchParams.get('cartId')
     if (!cartId) {
-      return NextResponse.json({ error: 'cartId is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Sepet kimliği (cartId) gerekli.' }, { status: 400 })
     }
     const cart = await getCart(cartId)
     return NextResponse.json({ cart })
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: error instanceof Error ? error.message : 'Bilinmeyen hata.' },
       { status: 500 }
     )
   }
@@ -51,10 +51,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ cart })
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    return NextResponse.json({ error: 'Geçersiz işlem.' }, { status: 400 })
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: error instanceof Error ? error.message : 'Bilinmeyen hata.' },
       { status: 500 }
     )
   }

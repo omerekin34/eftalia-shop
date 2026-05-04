@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'cartId veya lines gerekli.' }, { status: 400 })
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: error instanceof Error ? error.message : 'Bilinmeyen hata.' },
       { status: 500 }
     )
   }

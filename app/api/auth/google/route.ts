@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { OAuth2Client } from 'google-auth-library'
 import { customerAccessTokenCreate, customerCreate } from '@/lib/shopify'
+import { translateAnyStorefrontErrorMessage } from '@/lib/storefront-error-messages-tr'
 
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
 
@@ -125,7 +126,12 @@ export async function POST(request: Request) {
     return setAuthCookie(NextResponse.json({ ok: true }), newToken.accessToken)
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Google ile giriş başarısız oldu.' },
+      {
+        error:
+          error instanceof Error
+            ? translateAnyStorefrontErrorMessage(error.message)
+            : 'Google ile giriş başarısız oldu.',
+      },
       { status: 400 }
     )
   }

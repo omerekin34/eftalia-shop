@@ -9,6 +9,7 @@ import {
   PRODUCTS_QUERY,
 } from '@/lib/shopify/queries'
 import { storefrontFetch } from '@/lib/shopify/client'
+import { translateStorefrontUserErrorMessages } from '@/lib/storefront-error-messages-tr'
 
 export async function getCollections(first = 50) {
   type Response = {
@@ -178,7 +179,9 @@ export async function createCart(
     variables: { input: Object.keys(input).length ? input : {} },
   })
   if (data.cartCreate.userErrors.length) {
-    throw new Error(data.cartCreate.userErrors.map((e) => e.message).join(', '))
+    throw new Error(
+      translateStorefrontUserErrorMessages(data.cartCreate.userErrors.map((e) => e.message))
+    )
   }
   return data.cartCreate.cart
 }
@@ -195,7 +198,9 @@ export async function addCartLines(
     variables: { cartId, lines },
   })
   if (data.cartLinesAdd.userErrors.length) {
-    throw new Error(data.cartLinesAdd.userErrors.map((e) => e.message).join(', '))
+    throw new Error(
+      translateStorefrontUserErrorMessages(data.cartLinesAdd.userErrors.map((e) => e.message))
+    )
   }
   return data.cartLinesAdd.cart
 }
@@ -212,7 +217,9 @@ export async function updateCartLines(
     variables: { cartId, lines },
   })
   if (data.cartLinesUpdate.userErrors.length) {
-    throw new Error(data.cartLinesUpdate.userErrors.map((e) => e.message).join(', '))
+    throw new Error(
+      translateStorefrontUserErrorMessages(data.cartLinesUpdate.userErrors.map((e) => e.message))
+    )
   }
   return data.cartLinesUpdate.cart
 }
@@ -226,7 +233,9 @@ export async function removeCartLines(cartId: string, lineIds: string[]) {
     variables: { cartId, lineIds },
   })
   if (data.cartLinesRemove.userErrors.length) {
-    throw new Error(data.cartLinesRemove.userErrors.map((e) => e.message).join(', '))
+    throw new Error(
+      translateStorefrontUserErrorMessages(data.cartLinesRemove.userErrors.map((e) => e.message))
+    )
   }
   return data.cartLinesRemove.cart
 }

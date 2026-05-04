@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return NextResponse.json({ product })
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: error instanceof Error ? error.message : 'Bilinmeyen hata.' },
       { status: 500 }
     )
   }

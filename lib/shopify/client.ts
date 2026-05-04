@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { translateStorefrontUserErrorMessages } from '@/lib/storefront-error-messages-tr'
+
 const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN
 const SHOPIFY_STOREFRONT_TOKEN =
   process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || process.env.SHOPIFY_STOREFRONT_TOKEN
@@ -8,7 +10,9 @@ const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || '2025-01'
 function getEndpoint() {
   if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_STOREFRONT_TOKEN) {
     throw new Error(
-      'Missing Shopify configuration. Set SHOPIFY_STORE_DOMAIN and SHOPIFY_STOREFRONT_ACCESS_TOKEN.'
+      translateStorefrontUserErrorMessages([
+        'Missing Shopify configuration. Set SHOPIFY_STORE_DOMAIN and SHOPIFY_STOREFRONT_ACCESS_TOKEN.',
+      ])
     )
   }
   return `https://${SHOPIFY_STORE_DOMAIN}/api/${SHOPIFY_API_VERSION}/graphql.json`
@@ -37,17 +41,19 @@ export async function storefrontFetch<T>({
   })
 
   if (!res.ok) {
-    throw new Error(`Shopify request failed with status ${res.status}`)
+    throw new Error(
+      translateStorefrontUserErrorMessages([`Shopify request failed with status ${res.status}`])
+    )
   }
 
   const json = (await res.json()) as StorefrontResponse<T>
 
   if (json.errors?.length) {
-    throw new Error(json.errors.map((e) => e.message).join(', '))
+    throw new Error(translateStorefrontUserErrorMessages(json.errors.map((e) => e.message)))
   }
 
   if (!json.data) {
-    throw new Error('Shopify response has no data.')
+    throw new Error(translateStorefrontUserErrorMessages(['Shopify response has no data.']))
   }
 
   return json.data
