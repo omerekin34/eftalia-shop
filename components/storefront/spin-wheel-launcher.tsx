@@ -4,12 +4,17 @@ import { useEffect, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import { SpinWheelModal } from '@/components/storefront/spin-wheel-modal'
 
+const AUTO_OPEN_STORAGE_KEY = 'eftalia_spin_wheel_auto_opened_v1'
+
 export function SpinWheelLauncher() {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
+    const hasAutoOpened = window.localStorage.getItem(AUTO_OPEN_STORAGE_KEY) === '1'
+    if (hasAutoOpened) return
     const timer = window.setTimeout(() => {
       setIsModalOpen(true)
+      window.localStorage.setItem(AUTO_OPEN_STORAGE_KEY, '1')
     }, 450)
     return () => window.clearTimeout(timer)
   }, [])
