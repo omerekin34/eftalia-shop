@@ -136,10 +136,10 @@ export function AccountServiceRequestsPanel({ kind, title, intro, orders, ticket
       }
       if (data.metafieldOnlyReturn) {
         setSuccess(
-          'Talebiniz alındı. Henüz kargo/teslim satırı olmadığı için Shopify otomatik resmi iade açmıyor; talebiniz hesabınızda ve mağaza ekibinizin Shopify yönetiminde sipariş numaranızla görünür.'
+          'Talebiniz alındı. Siparişiniz henüz iade sürecine uygun durumda değilse ekibimiz talebinizi inceleyip en kısa sürede size dönüş yapar.'
         )
       } else {
-        setSuccess('Talebiniz kaydedildi. Ekibimiz Shopify sipariş numaranız üzerinden süreci yönetecek.')
+        setSuccess('Talebiniz kaydedildi. Ekibimiz sipariş numaranız üzerinden süreci takip edip sizi bilgilendirecek.')
       }
       setNote('')
       setReason('')
@@ -160,7 +160,7 @@ export function AccountServiceRequestsPanel({ kind, title, intro, orders, ticket
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-[#8a6b4b]">
-            {kind === 'cancel' ? 'İptal' : 'İade'} · Shopify ile eşleşen talepler
+            {kind === 'cancel' ? 'İptal' : 'İade'} · Taleplerim
           </p>
           <h2 className="mt-1 font-serif text-3xl text-[#4d3523] sm:text-4xl">{title}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#7d5f45]">{intro}</p>
@@ -177,10 +177,8 @@ export function AccountServiceRequestsPanel({ kind, title, intro, orders, ticket
           Yeni talep oluştur
         </h3>
         <p className="mt-1 text-xs text-[#8a6b4b]">
-          Talepler müşteri kaydınıza kaydedilir. Teslim satırları varsa Shopify’da resmi iade başlatılır; personel
-          e-postasını <strong>Shopify yönetim → Ayarlar → Kullanıcı ve izinler / Bildirimler</strong> üzerinden
-          tanımladığınız adrese &quot;Yeni iade talebi&quot; gibi mağaza e-postaları gider. Sunucuda{' '}
-          <strong>SHOPIFY_ADMIN_ACCESS_TOKEN</strong> ve gerekli metafield tanımları gerekir.
+          Talebiniz hesabınıza kaydedilir ve ekibimiz tarafından incelenir. Duruma göre iade veya iptal süreci
+          başlatılır; gerekli durumlarda size e-posta ile bilgilendirme yapılır.
         </p>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -286,7 +284,7 @@ export function AccountServiceRequestsPanel({ kind, title, intro, orders, ticket
                   </p>
                   {kind === 'return' && (t.shopifyReturnName || t.shopifyReturnId) ? (
                     <p className="mt-1 text-xs text-[#8a6b4b]">
-                      Shopify iade kaydı: {t.shopifyReturnName || t.shopifyReturnId}
+                      İade kayıt numarası: {t.shopifyReturnName || t.shopifyReturnId}
                     </p>
                   ) : null}
                   {t.note ? (

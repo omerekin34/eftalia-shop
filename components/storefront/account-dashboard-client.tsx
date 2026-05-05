@@ -473,7 +473,7 @@ export function AccountDashboardClient({
             <AccountServiceRequestsPanel
               kind="return"
               title="İade taleplerim"
-              intro="Ürün iadesi için talep oluşturun. Uygun siparişlerde Shopify resmi iade açar; personel e-postanızı mağaza Bildirimler ayarında tanımladıysanız iade e-postalarını alırsınız. Geçmiş talepler burada listelenir. İade koşulları için İade Politikası sayfamıza bakın."
+              intro="Ürün iadesi için talep oluşturabilirsiniz. Talebiniz ekibimiz tarafından incelenir, uygun siparişlerde iade süreci başlatılır ve gelişmeler size e-posta ile bildirilir. Geçmiş taleplerinizi burada görebilirsiniz."
               orders={orders}
               tickets={returnTickets}
             />
@@ -483,7 +483,7 @@ export function AccountDashboardClient({
             <AccountServiceRequestsPanel
               kind="cancel"
               title="İptal taleplerim"
-              intro="Henüz kargoya verilmemiş veya destek gerektiren iptaller için talep bırakın. Kesin iptal ve ödeme iadesi mağaza politikasına ve sipariş durumuna göre Shopify üzerinden tamamlanır."
+              intro="Henüz kargoya verilmemiş veya destek gerektiren siparişler için iptal talebi bırakabilirsiniz. Talebiniz incelendikten sonra sipariş durumuna göre iptal ve varsa ücret iadesi süreci tamamlanır."
               orders={orders}
               tickets={cancelTickets}
             />
