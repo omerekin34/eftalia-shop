@@ -526,7 +526,7 @@ export function AccountDashboardClient({
             <AccountServiceRequestsPanel
               kind="return"
               title="İade taleplerim"
-              intro="Ürün iadesi için talep oluşturun. Talepler hesabınızda saklanır; ekibimiz Shopify’daki sipariş numaranızla süreci yürütür. Onay sonrası iade koşulları için İade Politikası sayfamıza bakabilirsiniz."
+              intro="Ürün iadesi için talep oluşturun. Uygun siparişlerde Shopify resmi iade açar; personel e-postanızı mağaza Bildirimler ayarında tanımladıysanız iade e-postalarını alırsınız. Geçmiş talepler burada listelenir. İade koşulları için İade Politikası sayfamıza bakın."
               orders={orders}
               tickets={returnTickets}
             />

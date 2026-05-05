@@ -10,6 +10,27 @@ import {
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
 const MIN_TOTAL_SPEND = 5000
 
+/** Her bir Shopify kupon türü çark üzerinde kaç dilim kaplasın (örn. 3 → her koddan 3 dilim). */
+function getSegmentsPerPrize(): number {
+  const raw = Number(process.env.WHEEL_SEGMENTS_PER_PRIZE ?? '3')
+  if (!Number.isFinite(raw)) return 3
+  return Math.max(1, Math.min(12, Math.floor(raw)))
+}
+
+type WheelReward = { code: string; label: string }
+
+function expandWheelSegments(pool: WheelReward[]): WheelReward[] {
+  if (!pool.length) return []
+  const repeat = getSegmentsPerPrize()
+  const out: WheelReward[] = []
+  for (let r = 0; r < repeat; r += 1) {
+    for (const item of pool) {
+      out.push(item)
+    }
+  }
+  return out
+}
+
 type StoredReward = {
   code: string
   label: string
@@ -78,6 +99,8 @@ async function getStatusByToken(token: string) {
   const latestReward = rewardsWon[rewardsWon.length - 1] || null
   const alreadyUsed = Boolean(latestReward)
 
+  const wheelExpanded = expandWheelSegments(rewards)
+
   return {
     status: 200 as const,
     customerId: customer.id,
@@ -93,7 +116,9 @@ async function getStatusByToken(token: string) {
       alreadyUsed,
       reward: latestReward,
       rewardsWon,
-      rewardSlots: rewards.length,
+      rewardSlots: wheelExpanded.length,
+      segmentsPerPrize: getSegmentsPerPrize(),
+      wheelSegments: wheelExpanded.map(({ label }) => ({ label })),
     },
   }
 }
@@ -102,6 +127,7 @@ export async function GET() {
   const cookieStore = await cookies()
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
   const rewards = await getWheelDiscountRewards()
+  const wheelExpanded = expandWheelSegments(rewards as WheelReward[])
 
   if (!token) {
     return NextResponse.json(
@@ -117,7 +143,9 @@ export async function GET() {
         alreadyUsed: false,
         reward: null,
         rewardsWon: [],
-        rewardSlots: rewards.length,
+        rewardSlots: wheelExpanded.length,
+        segmentsPerPrize: getSegmentsPerPrize(),
+        wheelSegments: wheelExpanded.map(({ label }) => ({ label })),
       },
       { status: 200 }
     )
@@ -202,8 +230,15 @@ export async function POST() {
         { status: 503 }
       )
     }
-    const rewardIndex = Math.floor(Math.random() * rewards.length)
-    const reward = rewards[rewardIndex]
+    const expanded = expandWheelSegments(rewards)
+    if (!expanded.length) {
+      return NextResponse.json(
+        { error: 'Çark dilimleri oluşturulamadı. Kupon listesini kontrol edin.' },
+        { status: 503 }
+      )
+    }
+    const segmentIndex = Math.floor(Math.random() * expanded.length)
+    const reward = expanded[segmentIndex]
     const nextUsedSpins = status.payload.usedSpins + 1
     const rewardPayload: StoredReward = {
       ...reward,
@@ -236,7 +271,7 @@ export async function POST() {
       usedSpins: nextUsedSpins,
       remainingSpins: Math.max(0, status.payload.availableSpins - nextUsedSpins),
       rewardSlots: status.payload.rewardSlots,
-      rewardIndex: rewardIndex >= 0 ? rewardIndex : 0,
+      rewardIndex: segmentIndex >= 0 ? segmentIndex : 0,
     })
   } catch (error) {
     return NextResponse.json(

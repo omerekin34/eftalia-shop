@@ -12,9 +12,19 @@ function normalizeShopifyStoreDomain(raw: string | undefined): string {
 const SHOPIFY_STORE_DOMAIN = normalizeShopifyStoreDomain(process.env.SHOPIFY_STORE_DOMAIN)
 const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || '2025-01'
 const SHOPIFY_ADMIN_ACCESS_TOKEN = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
-const WHEEL_DISCOUNT_PREFIX = (process.env.WHEEL_DISCOUNT_PREFIX || 'EFTALIA').toUpperCase()
 const WHEEL_DISCOUNT_CODES = process.env.WHEEL_DISCOUNT_CODES || ''
 const WHEEL_DISCOUNT_PERCENTS = process.env.WHEEL_DISCOUNT_PERCENTS || '10,15,20,25,30'
+
+/** Çark listesi: env yok veya boş = tüm aktif kodlar; dolu = sadece bu önek (örn. EFTALIA). */
+function getWheelListPrefixFilter(): string | null {
+  const v = process.env.WHEEL_DISCOUNT_PREFIX
+  if (v === undefined) return null
+  const t = v.trim()
+  return t === '' ? null : t.toUpperCase()
+}
+
+/** Sunucunun oluşturacağı dinamik kodların öneki (spin havuzuyla ilgili değil). */
+const WHEEL_GENERATED_CODE_PREFIX = (process.env.WHEEL_GENERATED_CODE_PREFIX || 'EFTALIA').toUpperCase()
 
 /** Native Shopify `returnRequest` için teslim satırı gerekir; kargo öncesi yalnızca müşteri metafield kaydı yapılır. */
 export const SHOPIFY_RETURN_NO_FULFILLMENT_LINES =
@@ -141,160 +151,6 @@ const RETURN_REQUEST_MUTATION = /* GraphQL */ `
   }
 `
 
-const RETURN_APPROVE_REQUEST_MUTATION = /* GraphQL */ `
-  mutation ReturnApproveRequest($input: ReturnApproveRequestInput!) {
-    returnApproveRequest(input: $input) {
-      return {
-        id
-        status
-      }
-      userErrors {
-        field
-        message
-      }
-    }
-  }
-`
-
-const RETURN_DECLINE_REQUEST_MUTATION = /* GraphQL */ `
-  mutation ReturnDeclineRequest($input: ReturnDeclineRequestInput!) {
-    returnDeclineRequest(input: $input) {
-      returnDecline {
-        id
-      }
-      userErrors {
-        field
-        message
-      }
-    }
-  }
-`
-
-const ORDER_CANCEL_MUTATION = /* GraphQL */ `
-  mutation OrderCancel($orderId: ID!, $reason: OrderCancelReason!, $restock: Boolean!, $notifyCustomer: Boolean!) {
-    orderCancel(orderId: $orderId, reason: $reason, restock: $restock, notifyCustomer: $notifyCustomer) {
-      job {
-        id
-        done
-      }
-      userErrors {
-        field
-        message
-      }
-    }
-  }
-`
-
-const CUSTOMERS_WITH_REQUESTS_QUERY = /* GraphQL */ `
-  query CustomersWithRequests($first: Int!, $after: String) {
-    customers(first: $first, after: $after, query: "metafield:custom.return_requests:* OR metafield:custom.cancel_requests:*") {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      edges {
-        node {
-          id
-          firstName
-          lastName
-          email
-          returnRequests: metafield(namespace: "custom", key: "return_requests") {
-            value
-          }
-          cancelRequests: metafield(namespace: "custom", key: "cancel_requests") {
-            value
-          }
-        }
-      }
-    }
-  }
-`
-
-const CUSTOMER_REQUEST_METAFIELDS_QUERY = /* GraphQL */ `
-  query CustomerRequestMetafields($id: ID!) {
-    customer(id: $id) {
-      id
-      firstName
-      lastName
-      email
-      returnRequests: metafield(namespace: "custom", key: "return_requests") {
-        value
-      }
-      cancelRequests: metafield(namespace: "custom", key: "cancel_requests") {
-        value
-      }
-    }
-  }
-`
-
-type AdminServiceTicket = {
-  id: string
-  orderId: string
-  orderNumber: number
-  reason: string
-  note?: string
-  status: string
-  createdAt: string
-  shopifyReturnId?: string
-  shopifyReturnName?: string
-}
-
-type CustomerRequestRecord = {
-  customerId: string
-  customerName: string
-  customerEmail: string
-  kind: 'return' | 'cancel'
-  ticket: AdminServiceTicket
-}
-
-type CustomersWithRequestsData = {
-  customers?: {
-    pageInfo?: { hasNextPage?: boolean; endCursor?: string | null } | null
-    edges?: Array<{
-      node?: {
-        id?: string | null
-        firstName?: string | null
-        lastName?: string | null
-        email?: string | null
-        returnRequests?: { value?: string | null } | null
-        cancelRequests?: { value?: string | null } | null
-      } | null
-    } | null>
-  } | null
-}
-
-function parseTicketList(raw: string | null | undefined): AdminServiceTicket[] {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(String(raw || '[]'))
-  } catch {
-    return []
-  }
-  if (!Array.isArray(parsed)) return []
-  return parsed
-    .map((entry): AdminServiceTicket | null => {
-      if (!entry || typeof entry !== 'object') return null
-      const t = entry as Record<string, unknown>
-      const orderId = String(t.orderId || '').trim()
-      const orderNumber = Number(t.orderNumber)
-      const reason = String(t.reason || '').trim()
-      const createdAt = String(t.createdAt || '').trim()
-      if (!orderId || !Number.isFinite(orderNumber) || !reason || !createdAt) return null
-      return {
-        id: String(t.id || `${orderId}:${createdAt}`).trim(),
-        orderId,
-        orderNumber,
-        reason,
-        note: String(t.note || '').trim() || undefined,
-        status: String(t.status || 'beklemede').trim() || 'beklemede',
-        createdAt,
-        shopifyReturnId: String(t.shopifyReturnId || '').trim() || undefined,
-        shopifyReturnName: String(t.shopifyReturnName || '').trim() || undefined,
-      }
-    })
-    .filter((t): t is AdminServiceTicket => Boolean(t))
-}
-
 type AdminGraphqlFetchResult<T> =
   | { ok: true; data: T }
   | { ok: false; message: string; httpStatus?: number }
@@ -354,15 +210,6 @@ async function adminGraphqlFetch<T>(query: string, variables: Record<string, unk
   return result.data
 }
 
-async function fetchCustomersWithRequestsPage(
-  after: string | null
-): Promise<AdminGraphqlFetchResult<CustomersWithRequestsData>> {
-  return adminGraphqlFetchDetailed<CustomersWithRequestsData>(CUSTOMERS_WITH_REQUESTS_QUERY, {
-    first: 40,
-    after,
-  })
-}
-
 function toRewardFromCode(code: string) {
   const amountMatch = code.match(/(\d{1,2})$/)
   const amount = amountMatch?.[1] || '10'
@@ -420,9 +267,10 @@ export async function getWheelDiscountRewards() {
   const rewardsFromShopify = (data?.codeDiscountNodes?.nodes || [])
     .flatMap((node) => {
       const discount = node?.codeDiscount
+      const prefixFilter = getWheelListPrefixFilter()
       const codes = (discount?.codes?.nodes || [])
         .map((entry) => String(entry?.code || '').trim().toUpperCase())
-        .filter((code) => Boolean(code) && code.startsWith(WHEEL_DISCOUNT_PREFIX))
+        .filter((code) => Boolean(code) && (!prefixFilter || code.startsWith(prefixFilter)))
       if (!codes.length) return []
 
       const normalizedPercent = normalizeDiscountPercent(discount?.customerGets?.value?.percentage)
@@ -510,7 +358,7 @@ export async function createCustomerScopedWheelDiscount(customerGid: string, per
   }
 
   const safePercent = Math.max(1, Math.min(90, Math.round(percent)))
-  const code = createRandomCode(WHEEL_DISCOUNT_PREFIX)
+  const code = createRandomCode(WHEEL_GENERATED_CODE_PREFIX)
   const startsAt = new Date().toISOString()
   const ruleTitle = `Wheel ${safePercent}% - ${customerId} - ${Date.now()}`
 
@@ -807,159 +655,4 @@ export async function createShopifyReturnRequest(
   }
 
   return { ok: true, returnId, returnName: returnName || returnId }
-}
-
-export async function listCustomerServiceRequestsAdmin(limit = 120): Promise<
-  | { ok: true; records: CustomerRequestRecord[] }
-  | { ok: false; error: string }
-> {
-  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_ACCESS_TOKEN) {
-    return { ok: false, error: 'SHOPIFY_ADMIN_ACCESS_TOKEN eksik veya geçersiz.' }
-  }
-
-  const records: CustomerRequestRecord[] = []
-  let after: string | null = null
-
-  while (records.length < limit) {
-    const fetched = await fetchCustomersWithRequestsPage(after)
-
-    if (!fetched.ok) {
-      return {
-        ok: false,
-        error: `Talepler okunamadı: ${fetched.message}`,
-      }
-    }
-
-    const data = fetched.data
-    if (!data?.customers) {
-      return {
-        ok: false,
-        error:
-          'Shopify “customers” sorgusu veri döndürmedi. Admin token izinlerini (read_customers) ve mağaza alan adını kontrol edin.',
-      }
-    }
-
-    const edges = data.customers.edges || []
-    for (const edge of edges) {
-      const node = edge?.node
-      const customerId = String(node?.id || '').trim()
-      if (!customerId) continue
-      const customerName = [node?.firstName, node?.lastName].filter(Boolean).join(' ').trim() || 'Müşteri'
-      const customerEmail = String(node?.email || '').trim()
-
-      const returnTickets = parseTicketList(node?.returnRequests?.value)
-      const cancelTickets = parseTicketList(node?.cancelRequests?.value)
-
-      for (const ticket of returnTickets) {
-        records.push({ customerId, customerName, customerEmail, kind: 'return', ticket })
-      }
-      for (const ticket of cancelTickets) {
-        records.push({ customerId, customerName, customerEmail, kind: 'cancel', ticket })
-      }
-
-      if (records.length >= limit) break
-    }
-
-    if (records.length >= limit) break
-    if (!data.customers.pageInfo?.hasNextPage) break
-    after = String(data.customers.pageInfo?.endCursor || '')
-    if (!after) break
-  }
-
-  records.sort((a, b) => new Date(b.ticket.createdAt).getTime() - new Date(a.ticket.createdAt).getTime())
-  return { ok: true, records: records.slice(0, limit) }
-}
-
-export async function getCustomerRequestMetafieldsAdmin(customerId: string): Promise<
-  | {
-      ok: true
-      customer: {
-        id: string
-        firstName: string
-        lastName: string
-        email: string
-        returnTickets: AdminServiceTicket[]
-        cancelTickets: AdminServiceTicket[]
-      }
-    }
-  | { ok: false; error: string }
-> {
-  const id = String(customerId || '').trim()
-  if (!id) return { ok: false, error: 'Müşteri kimliği eksik.' }
-  const data = await adminGraphqlFetch<{
-    customer?: {
-      id?: string | null
-      firstName?: string | null
-      lastName?: string | null
-      email?: string | null
-      returnRequests?: { value?: string | null } | null
-      cancelRequests?: { value?: string | null } | null
-    } | null
-  }>(CUSTOMER_REQUEST_METAFIELDS_QUERY, { id })
-
-  const c = data?.customer
-  if (!c?.id) return { ok: false, error: 'Müşteri bulunamadı.' }
-
-  return {
-    ok: true,
-    customer: {
-      id: String(c.id),
-      firstName: String(c.firstName || ''),
-      lastName: String(c.lastName || ''),
-      email: String(c.email || ''),
-      returnTickets: parseTicketList(c.returnRequests?.value),
-      cancelTickets: parseTicketList(c.cancelRequests?.value),
-    },
-  }
-}
-
-export async function approveShopifyReturnRequest(returnId: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  const id = String(returnId || '').trim()
-  if (!id) return { ok: false, error: 'Shopify iade kimliği yok.' }
-  const data = await adminGraphqlFetch<{
-    returnApproveRequest?: { userErrors?: Array<{ message?: string | null } | null> | null } | null
-  }>(RETURN_APPROVE_REQUEST_MUTATION, { input: { id, notifyCustomer: true } })
-  if (!data?.returnApproveRequest) return { ok: false, error: 'İade onaylanamadı.' }
-  const errors = (data.returnApproveRequest.userErrors || []).map((e) => String(e?.message || '').trim()).filter(Boolean)
-  if (errors.length) return { ok: false, error: errors.join(' | ') }
-  return { ok: true }
-}
-
-export async function declineShopifyReturnRequest(
-  returnId: string,
-  declineNote?: string
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const id = String(returnId || '').trim()
-  if (!id) return { ok: false, error: 'Shopify iade kimliği yok.' }
-  const data = await adminGraphqlFetch<{
-    returnDeclineRequest?: { userErrors?: Array<{ message?: string | null } | null> | null } | null
-  }>(RETURN_DECLINE_REQUEST_MUTATION, {
-    input: {
-      id,
-      declineReason: 'OTHER',
-      ...(declineNote ? { declineNote: String(declineNote).slice(0, 500) } : {}),
-      notifyCustomer: true,
-    },
-  })
-  if (!data?.returnDeclineRequest) return { ok: false, error: 'İade reddedilemedi.' }
-  const errors = (data.returnDeclineRequest.userErrors || []).map((e) => String(e?.message || '').trim()).filter(Boolean)
-  if (errors.length) return { ok: false, error: errors.join(' | ') }
-  return { ok: true }
-}
-
-export async function cancelShopifyOrderAndNotify(orderId: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  const id = String(orderId || '').trim()
-  if (!id) return { ok: false, error: 'Sipariş kimliği yok.' }
-  const data = await adminGraphqlFetch<{
-    orderCancel?: { userErrors?: Array<{ message?: string | null } | null> | null } | null
-  }>(ORDER_CANCEL_MUTATION, {
-    orderId: id,
-    reason: 'CUSTOMER',
-    restock: true,
-    notifyCustomer: true,
-  })
-  if (!data?.orderCancel) return { ok: false, error: 'Sipariş iptal edilemedi.' }
-  const errors = (data.orderCancel.userErrors || []).map((e) => String(e?.message || '').trim()).filter(Boolean)
-  if (errors.length) return { ok: false, error: errors.join(' | ') }
-  return { ok: true }
 }

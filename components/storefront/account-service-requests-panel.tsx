@@ -136,7 +136,7 @@ export function AccountServiceRequestsPanel({ kind, title, intro, orders, ticket
       }
       if (data.metafieldOnlyReturn) {
         setSuccess(
-          'Talebiniz kaydedildi. Sipariş henüz kargoya çıkmadığı veya teslim satırı oluşmadığı için Shopify’da otomatik iade kaydı açılmadı; ekibimiz talebi mağaza panelinden sürdürecek.'
+          'Talebiniz alındı. Henüz kargo/teslim satırı olmadığı için Shopify otomatik resmi iade açmıyor; talebiniz hesabınızda ve mağaza ekibinizin Shopify yönetiminde sipariş numaranızla görünür.'
         )
       } else {
         setSuccess('Talebiniz kaydedildi. Ekibimiz Shopify sipariş numaranız üzerinden süreci yönetecek.')
@@ -177,8 +177,10 @@ export function AccountServiceRequestsPanel({ kind, title, intro, orders, ticket
           Yeni talep oluştur
         </h3>
         <p className="mt-1 text-xs text-[#8a6b4b]">
-          Talepler güvenli şekilde Shopify müşteri kaydınıza JSON olarak yazılır; ekibimiz sipariş numaranız üzerinden
-          süreci yürütür. Sunucuda tanımlı <strong>Admin API</strong> anahtarı ve müşteri metafield tanımları gerekir.
+          Talepler müşteri kaydınıza kaydedilir. Teslim satırları varsa Shopify’da resmi iade başlatılır; personel
+          e-postasını <strong>Shopify yönetim → Ayarlar → Kullanıcı ve izinler / Bildirimler</strong> üzerinden
+          tanımladığınız adrese &quot;Yeni iade talebi&quot; gibi mağaza e-postaları gider. Sunucuda{' '}
+          <strong>SHOPIFY_ADMIN_ACCESS_TOKEN</strong> ve gerekli metafield tanımları gerekir.
         </p>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 grid gap-4 sm:grid-cols-2">
