@@ -17,9 +17,24 @@ function setAuthCookie(response: NextResponse, accessToken: string) {
   return response
 }
 
-function deterministicGooglePassword(googleSub: string) {
-  const secret = process.env.GOOGLE_OAUTH_PASSWORD_SECRET || process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || 'eftalia-google-fallback'
+function deterministicGooglePassword(googleSub: string, secret: string) {
   return crypto.createHmac('sha256', secret).update(`google:${googleSub}`).digest('hex').slice(0, 32)
+}
+
+function getGooglePasswordCandidates(googleSub: string) {
+  const rawSecrets = [
+    process.env.GOOGLE_OAUTH_PASSWORD_SECRET,
+    process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN,
+    'eftalia-google-fallback',
+  ]
+  const uniqueSecrets = Array.from(
+    new Set(
+      rawSecrets
+        .map((s) => String(s || '').trim())
+        .filter(Boolean)
+    )
+  )
+  return uniqueSecrets.map((secret) => deterministicGooglePassword(googleSub, secret))
 }
 
 export async function POST(request: Request) {
@@ -61,31 +76,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Google hesabınızın e-posta doğrulaması gerekli.' }, { status: 400 })
     }
 
-    const generatedPassword = deterministicGooglePassword(googleSub)
+    const passwordCandidates = getGooglePasswordCandidates(googleSub)
+    const primaryPassword = passwordCandidates[0]
 
-    try {
-      const existingToken = await customerAccessTokenCreate(email, generatedPassword)
-      if (existingToken?.accessToken) {
-        return setAuthCookie(NextResponse.json({ ok: true }), existingToken.accessToken)
+    for (const candidatePassword of passwordCandidates) {
+      try {
+        const existingToken = await customerAccessTokenCreate(email, candidatePassword)
+        if (existingToken?.accessToken) {
+          return setAuthCookie(NextResponse.json({ ok: true }), existingToken.accessToken)
+        }
+      } catch {
+        // Continue trying other password candidates.
       }
-    } catch {
-      // Customer may not exist yet or password mismatch.
-    }
-
-    if (mode === 'login') {
-      return NextResponse.json(
-        {
-          error:
-            'Bu Google hesabı ile doğrudan giriş yapılamadı. Hesabınız daha önce e-posta/şifre ile açıldıysa önce normal giriş yapıp profil ekranından Google hesabınızı bağlayın; ilk kez kayıt olacaksanız "Üye Ol" sekmesine geçin.',
-        },
-        { status: 400 }
-      )
     }
 
     if (!acceptsPolicies) {
       return NextResponse.json(
-        { error: 'Google ile devam etmek için politika metinlerini kabul etmelisiniz.' },
-        { status: 400 }
+        {
+          ok: false,
+          code: 'POLICY_REQUIRED',
+          error:
+            mode === 'login'
+              ? 'Bu Google hesabı ile doğrudan giriş yapılamadı. Üye Ol sekmesine geçip sözleşmeleri kabul ederek Google ile devam edin.'
+              : 'Google ile devam etmek için politika metinlerini kabul etmelisiniz.',
+        },
+        { status: 200 }
       )
     }
 
@@ -94,7 +109,7 @@ export async function POST(request: Request) {
         firstName: firstName || undefined,
         lastName: lastName || undefined,
         email,
-        password: generatedPassword,
+        password: primaryPassword,
         acceptsMarketing: true,
       })
     } catch (error) {
@@ -109,16 +124,18 @@ export async function POST(request: Request) {
       ) {
         return NextResponse.json(
           {
+            ok: false,
+            code: 'PASSWORD_LOGIN_REQUIRED',
             error:
-              'Bu e-posta ile daha önce klasik üyelik açılmış görünüyor. Önce e-posta/şifre ile giriş yapıp hesap ekranından Google hesabınızı bağlayın.',
+              'Bu e-posta ile daha önce farklı bir giriş yöntemiyle hesap açılmış görünüyor. Lütfen e-posta/şifre ile giriş yapın.',
           },
-          { status: 400 }
+          { status: 200 }
         )
       }
       throw error
     }
 
-    const newToken = await customerAccessTokenCreate(email, generatedPassword)
+    const newToken = await customerAccessTokenCreate(email, primaryPassword)
     if (!newToken?.accessToken) {
       return NextResponse.json({ error: 'Google ile giriş tamamlanamadı.' }, { status: 400 })
     }

@@ -116,6 +116,7 @@ export function Hero() {
                   src="/images/1.png"
                   alt="EFTALIA - Her Detayda Zarafet"
                   fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                   className="object-cover object-center brightness-[0.99] contrast-110 saturate-110"
                   priority
                 />

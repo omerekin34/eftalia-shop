@@ -43,6 +43,9 @@ function LoginPageContent() {
   const [recoverSubmitting, setRecoverSubmitting] = useState(false)
   const [acceptsPolicies, setAcceptsPolicies] = useState(false)
   const googleButtonRef = useRef<HTMLDivElement | null>(null)
+  const googleInitializedRef = useRef(false)
+  const modeRef = useRef<AuthMode>(initialMode)
+  const acceptsPoliciesRef = useRef(false)
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -56,50 +59,69 @@ function LoginPageContent() {
   }
 
   useEffect(() => {
+    modeRef.current = mode
+  }, [mode])
+
+  useEffect(() => {
+    acceptsPoliciesRef.current = acceptsPolicies
+  }, [acceptsPolicies])
+
+  useEffect(() => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
     if (!clientId) return
 
     const renderGoogleButton = () => {
       if (!window.google?.accounts?.id || !googleButtonRef.current) return
 
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async ({ credential }) => {
-          setErrorMessage('')
-          setIsSubmitting(true)
-          try {
-            const response = await fetch('/api/auth/google', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ credential, acceptsPolicies, mode }),
-            })
-            const data = (await response.json()) as { error?: string }
-            if (!response.ok) {
-              throw new Error(data?.error || 'Google ile giriş başarısız oldu.')
+      if (!googleInitializedRef.current) {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: async ({ credential }) => {
+            setErrorMessage('')
+            setIsSubmitting(true)
+            try {
+              const response = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  credential,
+                  acceptsPolicies: acceptsPoliciesRef.current,
+                  mode: modeRef.current,
+                }),
+              })
+              const data = (await response.json()) as { ok?: boolean; code?: string; error?: string }
+              if (!response.ok || data?.ok === false) {
+                throw new Error(data?.error || 'Google ile giriş başarısız oldu.')
+              }
+              window.dispatchEvent(new Event('auth:changed'))
+              router.push('/account')
+              router.refresh()
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Google ile giriş başarısız oldu.'
+              const shouldSwitchToRegister = message.toLocaleLowerCase('tr').includes('üye ol sekmesine geç')
+              if (shouldSwitchToRegister) {
+                setMode('register')
+                setErrorMessage('')
+              } else {
+                setErrorMessage(message)
+              }
+            } finally {
+              setIsSubmitting(false)
             }
-            window.dispatchEvent(new Event('auth:changed'))
-            router.push('/account')
-            router.refresh()
-          } catch (error) {
-            const message = error instanceof Error ? error.message : 'Google ile giriş başarısız oldu.'
-            setErrorMessage(message)
-            if (message.toLocaleLowerCase('tr').includes('üye ol sekmesine geç')) {
-              setMode('register')
-            }
-          } finally {
-            setIsSubmitting(false)
-          }
-        },
-      })
+          },
+        })
+        googleInitializedRef.current = true
+      }
 
       googleButtonRef.current.innerHTML = ''
+      const buttonWidth = Math.max(240, Math.min(360, googleButtonRef.current.clientWidth || 360))
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         theme: 'outline',
         size: 'large',
         text: 'continue_with',
         shape: 'rectangular',
         logo_alignment: 'left',
-        width: 360,
+        width: buttonWidth,
       })
     }
 
@@ -116,7 +138,7 @@ function LoginPageContent() {
     script.dataset.googleIdentity = '1'
     script.onload = renderGoogleButton
     document.head.appendChild(script)
-  }, [acceptsPolicies, mode, router])
+  }, [router])
 
   const handleRecoverPassword = async () => {
     setErrorMessage('')
