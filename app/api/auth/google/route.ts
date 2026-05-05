@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { OAuth2Client } from 'google-auth-library'
 import { customerAccessTokenCreate, customerCreate } from '@/lib/shopify'
+import { setCustomerPasswordByEmailAdmin } from '@/lib/shopify-admin'
 import { translateAnyStorefrontErrorMessage } from '@/lib/storefront-error-messages-tr'
 
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
@@ -70,12 +71,15 @@ export async function POST(request: Request) {
     const lastName = String(payload?.family_name || '').trim()
 
     if (!email || !googleSub) {
+      console.warn('[auth/google] missing-email-or-sub')
       return NextResponse.json({ error: 'Google hesabından e-posta bilgisi alınamadı.' }, { status: 400 })
     }
     if (!emailVerified) {
+      console.warn('[auth/google] email-not-verified', { email })
       return NextResponse.json({ error: 'Google hesabınızın e-posta doğrulaması gerekli.' }, { status: 400 })
     }
 
+    console.info('[auth/google] start', { email, mode })
     const passwordCandidates = getGooglePasswordCandidates(googleSub)
     const primaryPassword = passwordCandidates[0]
 
@@ -83,14 +87,37 @@ export async function POST(request: Request) {
       try {
         const existingToken = await customerAccessTokenCreate(email, candidatePassword)
         if (existingToken?.accessToken) {
+          console.info('[auth/google] existing-token-login-success', { email })
           return setAuthCookie(NextResponse.json({ ok: true }), existingToken.accessToken)
         }
       } catch {
         // Continue trying other password candidates.
       }
     }
+    console.info('[auth/google] existing-token-login-failed', { email })
+
+    // Existing classic email/password accounts can be migrated transparently on first Google login.
+    const migrateResult = await setCustomerPasswordByEmailAdmin(email, primaryPassword)
+    console.info('[auth/google] migrate-result', {
+      email,
+      ok: migrateResult.ok,
+      ...(migrateResult.ok ? {} : { error: migrateResult.error }),
+    })
+    if (migrateResult.ok) {
+      try {
+        const migratedToken = await customerAccessTokenCreate(email, primaryPassword)
+        if (migratedToken?.accessToken) {
+          console.info('[auth/google] migrated-login-success', { email })
+          return setAuthCookie(NextResponse.json({ ok: true }), migratedToken.accessToken)
+        }
+      } catch {
+        // Fall through to register/policy flow.
+      }
+      console.warn('[auth/google] migrated-login-failed-after-password-update', { email })
+    }
 
     if (!acceptsPolicies) {
+      console.info('[auth/google] policy-required', { email, mode })
       return NextResponse.json(
         {
           ok: false,
@@ -112,6 +139,7 @@ export async function POST(request: Request) {
         password: primaryPassword,
         acceptsMarketing: true,
       })
+      console.info('[auth/google] customer-created', { email })
     } catch (error) {
       const message = error instanceof Error ? error.message : ''
       const normalized = message.toLocaleLowerCase('tr')
@@ -122,6 +150,7 @@ export async function POST(request: Request) {
         normalized.includes('zaten alinmis') ||
         normalized.includes('mevcut')
       ) {
+        console.warn('[auth/google] customer-create-existing-email', { email })
         return NextResponse.json(
           {
             ok: false,
@@ -137,11 +166,14 @@ export async function POST(request: Request) {
 
     const newToken = await customerAccessTokenCreate(email, primaryPassword)
     if (!newToken?.accessToken) {
+      console.warn('[auth/google] new-token-create-failed', { email })
       return NextResponse.json({ error: 'Google ile giriş tamamlanamadı.' }, { status: 400 })
     }
+    console.info('[auth/google] register-login-success', { email })
 
     return setAuthCookie(NextResponse.json({ ok: true }), newToken.accessToken)
   } catch (error) {
+    console.error('[auth/google] unexpected-error', error)
     return NextResponse.json(
       {
         error:

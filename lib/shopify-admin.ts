@@ -116,6 +116,31 @@ const CUSTOMER_SPIN_REWARD_QUERY = /* GraphQL */ `
   }
 `
 
+const CUSTOMER_BY_EMAIL_QUERY = /* GraphQL */ `
+  query CustomerByEmail($query: String!) {
+    customers(first: 1, query: $query) {
+      nodes {
+        id
+        email
+      }
+    }
+  }
+`
+
+const CUSTOMER_PASSWORD_UPDATE_MUTATION = /* GraphQL */ `
+  mutation CustomerPasswordUpdate($input: CustomerInput!) {
+    customerUpdate(input: $input) {
+      customer {
+        id
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`
+
 const ORDER_FULFILLMENT_LINE_ITEMS_QUERY = /* GraphQL */ `
   query OrderForReturnRequest($id: ID!) {
     order(id: $id) {
@@ -569,6 +594,48 @@ export async function getCustomerSpinWheelRewardRaw(customerId: string) {
     ok: true as const,
     rawValue: String(data?.customer?.metafield?.value || ''),
   }
+}
+
+export async function setCustomerPasswordByEmailAdmin(email: string, password: string) {
+  const normalizedEmail = String(email || '').trim().toLowerCase()
+  const nextPassword = String(password || '').trim()
+  if (!normalizedEmail || !nextPassword) {
+    return { ok: false as const, error: 'E-posta veya parola bilgisi eksik.' }
+  }
+  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_ACCESS_TOKEN) {
+    return { ok: false as const, error: 'SHOPIFY_ADMIN_ACCESS_TOKEN eksik veya geçersiz.' }
+  }
+
+  const customerLookup = await adminGraphqlFetch<{
+    customers?: { nodes?: Array<{ id?: string | null; email?: string | null } | null> | null } | null
+  }>(CUSTOMER_BY_EMAIL_QUERY, {
+    query: `email:${normalizedEmail}`,
+  })
+  const customerNode = customerLookup?.customers?.nodes?.[0]
+  const customerId = String(customerNode?.id || '').trim()
+  if (!customerId) {
+    return { ok: false as const, error: 'Müşteri bulunamadı.', code: 'NOT_FOUND' as const }
+  }
+
+  const updateResult = await adminGraphqlFetch<{
+    customerUpdate?: {
+      customer?: { id?: string | null } | null
+      userErrors?: Array<{ message?: string | null } | null>
+    } | null
+  }>(CUSTOMER_PASSWORD_UPDATE_MUTATION, {
+    input: { id: customerId, password: nextPassword },
+  })
+  if (!updateResult?.customerUpdate) {
+    return { ok: false as const, error: 'Müşteri parolası Shopify Admin üzerinden güncellenemedi.' }
+  }
+  const userErrors = (updateResult.customerUpdate.userErrors || [])
+    .map((e) => String(e?.message || '').trim())
+    .filter(Boolean)
+  if (userErrors.length) {
+    return { ok: false as const, error: userErrors.join(' | ') }
+  }
+
+  return { ok: true as const, customerId }
 }
 
 export async function createShopifyReturnRequest(
