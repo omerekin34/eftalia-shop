@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getShopCampaignBannerConfigFromMetafield } from '@/lib/shopify-admin'
+import type { CampaignBannerConfig } from '@/lib/shopify-admin'
 
-function readEnvFallback() {
+function readEnvFallback(): CampaignBannerConfig {
   const enabled = String(process.env.NEXT_PUBLIC_CAMPAIGN_BAR_ENABLED || '').trim() === '1'
   const message = String(process.env.NEXT_PUBLIC_CAMPAIGN_BAR_MESSAGE || '').trim()
   const messagesRaw = String(process.env.NEXT_PUBLIC_CAMPAIGN_BAR_MESSAGES || '').trim()
