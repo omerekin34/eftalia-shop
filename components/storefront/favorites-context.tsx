@@ -144,19 +144,22 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     [favorites]
   )
 
-  const removeFavorite = useCallback((productId: string) => {
-    setFavorites((prev) => {
-      const next = prev.filter((item) => item.id !== productId)
-      if (isAuthenticated && customerId) {
-        void fetch('/api/account/favorites', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ favorites: next }),
-        })
-      }
-      return next
-    })
-  }, [])
+  const removeFavorite = useCallback(
+    (productId: string) => {
+      setFavorites((prev) => {
+        const next = prev.filter((item) => item.id !== productId)
+        if (isAuthenticated && customerId) {
+          void fetch('/api/account/favorites', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ favorites: next }),
+          })
+        }
+        return next
+      })
+    },
+    [isAuthenticated, customerId]
+  )
 
   const toggleFavorite = useCallback(
     (product: FavoriteProductInput) => {

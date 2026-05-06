@@ -86,7 +86,7 @@ async function getStatusByToken(token: string) {
   const adminRewardRawResult = await getCustomerSpinWheelRewardRaw(customer.id)
   const rewardRaw = adminRewardRawResult.ok ? adminRewardRawResult.rawValue : customer.spinWheelRewardRaw || ''
 
-  const totalSpend = orders.reduce((sum: number, order: any) => {
+  const totalSpend = orders.reduce((sum: number, order: { totalPrice?: { amount?: string } }) => {
     const amount = Number(order?.totalPrice?.amount || 0)
     return Number.isFinite(amount) ? sum + amount : sum
   }, 0)
@@ -273,7 +273,7 @@ export async function POST() {
       rewardSlots: status.payload.rewardSlots,
       rewardIndex: segmentIndex >= 0 ? segmentIndex : 0,
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         error: 'Çarkıfelek sırasında bir hata oluştu. Lütfen tekrar deneyin.',

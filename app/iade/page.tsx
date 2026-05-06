@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { RefreshCw, ShieldCheck, CalendarClock, ClipboardCheck } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'

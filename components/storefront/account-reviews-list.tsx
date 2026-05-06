@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { ArrowUpRight, Trash2 } from 'lucide-react'
 
@@ -72,11 +73,12 @@ export function AccountReviewsList({ reviews: initialReviews }: { reviews: Accou
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                 <div className="flex shrink-0 items-center justify-center sm:block">
                   {review.imageUrl ? (
-                    <img
+                    <Image
                       src={review.imageUrl}
-                      alt=""
+                      alt={review.productTitle}
+                      width={80}
+                      height={80}
                       className="h-20 w-20 rounded-lg border border-[#9b7a57]/20 object-cover"
-                      loading="lazy"
                     />
                   ) : (
                     <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-[#9b7a57]/25 bg-white/60 text-xs text-[#8a6b4b]">

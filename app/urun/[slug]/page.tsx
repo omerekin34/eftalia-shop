@@ -349,7 +349,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     setSelectedColor(product.colors[0] || defaultProduct.colors[0])
     setCurrentImageIndex(0)
-  }, [product.id])
+  }, [product.id, product.colors])
 
   const productReviews: ProductReview[] = [
     {

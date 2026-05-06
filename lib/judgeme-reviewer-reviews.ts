@@ -68,7 +68,6 @@ export async function fetchJudgeMeReviewsByReviewerEmail(
     });
     return byEmail.map((raw) => {
       const review = raw as Record<string, unknown>;
-      const reviewer = review?.reviewer as Record<string, unknown> | undefined;
       const ratingNum = Number(review?.rating ?? 0);
       return {
         id: (review?.id ?? review?.review_id ?? "") as string | number,

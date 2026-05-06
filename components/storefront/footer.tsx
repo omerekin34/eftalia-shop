@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Instagram, MapPin } from 'lucide-react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { PaymentTrustMarquee } from '@/components/storefront/payment-trust-marquee'
 
 const FEATURED_CATEGORY_TOKENS = [

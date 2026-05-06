@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ProductCard } from './product-card'
@@ -74,12 +74,12 @@ export function CategoryCarousel({ title, products }: CategoryCarouselProps) {
     setScrollByProgress(progress)
   }
 
-  const handleTrackDrag = (clientX: number) => {
+  const handleTrackDrag = useCallback((clientX: number) => {
     if (!progressTrackRef.current) return
     const rect = progressTrackRef.current.getBoundingClientRect()
     const progress = (clientX - rect.left) / rect.width
     setScrollByProgress(progress)
-  }
+  }, [])
 
   useEffect(() => {
     checkScroll()
@@ -104,7 +104,7 @@ export function CategoryCarousel({ title, products }: CategoryCarouselProps) {
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseup', onMouseUp)
     }
-  }, [isDraggingTrack])
+  }, [isDraggingTrack, handleTrackDrag])
 
   if (products.length === 0) return null
 

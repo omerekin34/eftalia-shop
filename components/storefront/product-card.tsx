@@ -32,10 +32,9 @@ interface Product {
 
 interface ProductCardProps {
   product: Product
-  showQuickAdd?: boolean
 }
 
-export function ProductCard({ product, showQuickAdd = false }: ProductCardProps) {
+export function ProductCard({ product }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [selectedColor, setSelectedColor] = useState(product.colors[0])
   const { isFavorite, toggleFavorite } = useFavorites()
@@ -158,7 +157,7 @@ export function ProductCard({ product, showQuickAdd = false }: ProductCardProps)
         {/* Color Variants - Bottom of image */}
         {product.colors.length > 1 && (
           <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 shadow-sm sm:bottom-3 sm:right-3">
-            {product.colors.slice(0, 3).map((color, index) => (
+            {product.colors.slice(0, 3).map((color) => (
               <button
                 key={color.name}
                 onClick={(e) => {

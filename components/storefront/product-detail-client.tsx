@@ -113,7 +113,7 @@ export function ProductDetailClient({
   const [reviewBody, setReviewBody] = useState('')
   const [reviewName, setReviewName] = useState('')
   const [reviewEmail, setReviewEmail] = useState('')
-  const [reviewPhoto, setReviewPhoto] = useState<File | null>(null)
+  const [, setReviewPhoto] = useState<File | null>(null)
   const [isReviewSubmitting, setIsReviewSubmitting] = useState(false)
   const [reviewMessage, setReviewMessage] = useState('')
   const [reviewError, setReviewError] = useState('')
@@ -121,11 +121,12 @@ export function ProductDetailClient({
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [policyClaims, setPolicyClaims] = useState<StorePolicyClaims>(DEFAULT_STORE_POLICY_CLAIMS)
 
-  const colorOption = product.options.find((option) =>
-    ['renk', 'color'].includes((option.name || '').toLocaleLowerCase('tr'))
+  const colorValues = useMemo(
+    () =>
+      product.options.find((option) => ['renk', 'color'].includes((option.name || '').toLocaleLowerCase('tr')))
+        ?.values || [],
+    [product.options]
   )
-
-  const colorValues = colorOption?.values || []
   const [selectedColor, setSelectedColor] = useState<string>(colorValues[0] || '')
 
   useEffect(() => {
