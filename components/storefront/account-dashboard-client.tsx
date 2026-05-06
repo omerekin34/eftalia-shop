@@ -184,11 +184,19 @@ export function AccountDashboardClient({
     zip: '',
     phone: '',
   })
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [favoriteStockById, setFavoriteStockById] = useState<Record<string, boolean>>({})
+  const [restockedFavoriteIds, setRestockedFavoriteIds] = useState<string[]>([])
 
   const fullName = useMemo(
     () => [profileForm.firstName, profileForm.lastName].filter(Boolean).join(' ').trim(),
     [profileForm.firstName, profileForm.lastName]
   )
+
+  const favoriteStockStorageKey = useMemo(() => {
+    const identity = String(customer.id || profileForm.email || 'guest').trim()
+    return `eftalia_favorite_stock_state_${identity}`
+  }, [customer.id, profileForm.email])
 
   useEffect(() => {
     const tab = getTabFromParam(searchParams.get('tab'))
@@ -196,6 +204,66 @@ export function AccountDashboardClient({
       setActiveTab(tab)
     }
   }, [searchParams, activeTab])
+
+  useEffect(() => {
+    if (!favorites.length) {
+      setFavoriteStockById({})
+      setRestockedFavoriteIds([])
+      return
+    }
+
+    let alive = true
+    const syncFavoriteStock = async () => {
+      try {
+        const results = await Promise.all(
+          favorites.map(async (item) => {
+            try {
+              const response = await fetch(`/api/shopify/product/${encodeURIComponent(item.slug)}`, {
+                cache: 'no-store',
+              })
+              if (!response.ok) return { id: item.id, inStock: item.inStock !== false }
+              const data = (await response.json()) as { product?: { inStock?: boolean } }
+              const inStock = data?.product?.inStock !== false
+              return { id: item.id, inStock }
+            } catch {
+              return { id: item.id, inStock: item.inStock !== false }
+            }
+          })
+        )
+
+        if (!alive) return
+
+        const nextStockById = results.reduce<Record<string, boolean>>((acc, row) => {
+          acc[row.id] = row.inStock
+          return acc
+        }, {})
+
+        setFavoriteStockById(nextStockById)
+
+        let previousStockById: Record<string, boolean> = {}
+        try {
+          const raw = localStorage.getItem(favoriteStockStorageKey)
+          previousStockById = raw ? (JSON.parse(raw) as Record<string, boolean>) : {}
+        } catch {
+          previousStockById = {}
+        }
+
+        const restockedIds = favorites
+          .filter((item) => previousStockById[item.id] === false && nextStockById[item.id] === true)
+          .map((item) => item.id)
+
+        setRestockedFavoriteIds(restockedIds)
+        localStorage.setItem(favoriteStockStorageKey, JSON.stringify(nextStockById))
+      } catch {
+        // ignore stock-sync failures to avoid blocking account page
+      }
+    }
+
+    void syncFavoriteStock()
+    return () => {
+      alive = false
+    }
+  }, [favorites, favoriteStockStorageKey])
 
   useEffect(() => {
     let active = true
@@ -239,6 +307,11 @@ export function AccountDashboardClient({
     const path = tab === 'dashboard' ? '/account' : `/account?tab=${tab}`
     router.push(path, { scroll: false })
   }
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [activeTab])
 
   const handleProfileSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -376,7 +449,21 @@ export function AccountDashboardClient({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[290px_1fr]">
-        <AccountSidebar />
+        <div>
+          <div className="mb-3 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+              className="rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white"
+            >
+              {isMobileMenuOpen ? 'Hesap Menüsünü Kapat' : '<< Hesabım Menü'}
+            </button>
+          </div>
+          <AccountSidebar
+            className={`${isMobileMenuOpen ? 'block' : 'hidden'} lg:block`}
+            onNavigate={() => setIsMobileMenuOpen(false)}
+          />
+        </div>
 
         <div className="rounded-2xl border border-[#9b7a57]/25 bg-[#fffaf2] p-6">
           {activeTab === 'dashboard' && (
@@ -741,9 +828,20 @@ export function AccountDashboardClient({
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className={`text-xs ${item.inStock === false ? 'text-rose-700' : 'text-[#7d5f45]'}`}>
-                            {item.inStock === false ? 'Stokta yok' : 'Stokta'}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p
+                              className={`text-xs ${
+                                favoriteStockById[item.id] === false ? 'text-rose-700' : 'text-[#7d5f45]'
+                              }`}
+                            >
+                              {favoriteStockById[item.id] === false ? 'Stokta yok' : 'Stokta'}
+                            </p>
+                            {restockedFavoriteIds.includes(item.id) ? (
+                              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+                                Tekrar Stokta
+                              </span>
+                            ) : null}
+                          </div>
                           <button
                             type="button"
                             onClick={() => removeFavorite(item.id)}

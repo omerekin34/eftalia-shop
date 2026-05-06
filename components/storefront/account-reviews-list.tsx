@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Trash2 } from 'lucide-react'
+import { ArrowUpRight, Trash2 } from 'lucide-react'
 
 export type AccountReviewRow = {
   id: string | number
@@ -98,16 +98,27 @@ export function AccountReviewsList({ reviews: initialReviews }: { reviews: Accou
                         <p className="font-serif text-lg font-semibold text-[#4d3523]">{review.productTitle}</p>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      title="Judge.me: mümkünse tamamen siler; aksi halde yayından kaldırır (spam). Sayfa yenilenince listede görünmez."
-                      disabled={busy}
-                      onClick={() => handleRemove(rid)}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-200/80 bg-white/90 px-3 py-1.5 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-50 disabled:opacity-50"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {busy ? 'Kaldırılıyor…' : 'Kaldır'}
-                    </button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {review.productHandle ? (
+                        <Link
+                          href={`/product/${review.productHandle}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#caa980]/45 bg-gradient-to-br from-[#fff7ea] via-[#fff1de] to-[#f8e8cb] px-3 py-1.5 text-xs font-semibold tracking-[0.08em] text-[#5B1F2A]"
+                        >
+                          Ürüne Git
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        </Link>
+                      ) : null}
+                      <button
+                        type="button"
+                        title="Judge.me: mümkünse tamamen siler; aksi halde yayından kaldırır (spam). Sayfa yenilenince listede görünmez."
+                        disabled={busy}
+                        onClick={() => handleRemove(rid)}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-200/80 bg-white/90 px-3 py-1.5 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-50 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {busy ? 'Kaldırılıyor…' : 'Kaldır'}
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-0.5">

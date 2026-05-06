@@ -435,7 +435,7 @@ const getPriceRoundUnit = (maxPrice: number) => {
       <Navbar />
       
       {/* Breadcrumb */}
-      <div className="border-b border-bronze/10 bg-ivory/80 pt-24">
+      <div className="border-b border-bronze/10 bg-ivory/80 pt-32 sm:pt-36">
         <div className="container mx-auto px-4 py-3">
           <nav className="flex items-center gap-2 text-sm text-bronze/60">
             <a href="/" className="transition-colors hover:text-bronze">Anasayfa</a>

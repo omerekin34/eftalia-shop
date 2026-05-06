@@ -16,7 +16,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
   return (
     <div className="min-h-screen bg-[#f7f1e7]">
       <Navbar />
-      <main className="pb-20 pt-28 sm:pt-32">{children}</main>
+      <main className="pb-20 pt-32 sm:pt-36">{children}</main>
       <Footer />
     </div>
   )

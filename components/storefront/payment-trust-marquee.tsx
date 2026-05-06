@@ -93,8 +93,14 @@ export function PaymentTrustMarquee({ variant = 'page' }: { variant?: PaymentTru
     load()
   }, [])
 
-  const row = badges.length ? badges : ['VISA', 'MASTERCARD', 'AMERICAN_EXPRESS', 'APPLE_PAY', 'GOOGLE_PAY']
-  const loop = [...row, ...row]
+  const row = badges.length
+    ? badges
+    : ['VISA', 'MASTERCARD', 'AMERICAN_EXPRESS', 'APPLE_PAY', 'GOOGLE_PAY']
+  // Marquee hattı kısa kalırsa boşluk oluşmaması için öğeleri çoğalt.
+  const minVisibleItems = 16
+  const repeatCount = Math.max(4, Math.ceil(minVisibleItems / row.length))
+  const repeatedRow = Array.from({ length: repeatCount }, () => row).flat()
+  const loop = [...repeatedRow, ...repeatedRow]
 
   return (
     <section

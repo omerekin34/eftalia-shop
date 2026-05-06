@@ -30,7 +30,7 @@ export function Hero() {
         </svg>
       </div>
 
-      <div className="relative z-10 mx-auto max-w-7xl px-4 py-32 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 pb-24 pt-40 sm:px-6 sm:py-32 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           {/* Content */}
           <motion.div
@@ -39,17 +39,6 @@ export function Hero() {
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
             className="text-center lg:text-left"
           >
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.8 }}
-              className="mb-6"
-            >
-              <span className="inline-block border-b border-bronze/30 pb-1 text-xs tracking-[0.4em] text-bronze-light">
-                ZANAAT KOLEKSİYONU 2026
-              </span>
-            </motion.div>
-
             <h1 className="font-serif text-4xl leading-tight tracking-wide text-bronze sm:text-5xl md:text-6xl lg:text-7xl text-balance">
               {'EFTALIA:'}
               <br />
@@ -125,11 +114,6 @@ export function Hero() {
               {/* Gold shimmer sweep */}
               <div className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-[linear-gradient(90deg,transparent_0%,rgba(212,175,55,0.45)_50%,transparent_100%)] opacity-0 transition-all duration-700 group-hover:left-[115%] group-hover:opacity-100" />
 
-              {/* Premium badge */}
-              <div className="absolute right-4 top-4 rounded-full border border-gold/40 bg-ivory/80 px-3 py-1 text-[10px] tracking-[0.2em] text-bronze backdrop-blur-sm">
-                PREMIUM CRAFT
-              </div>
-              
               {/* Corner frames */}
               <div className="absolute left-4 top-4 h-12 w-12 border-l border-t border-bronze/30" />
               <div className="absolute bottom-4 right-4 h-12 w-12 border-b border-r border-bronze/30" />

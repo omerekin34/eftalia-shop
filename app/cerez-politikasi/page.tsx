@@ -11,7 +11,7 @@ export default async function CerezPolitikasiPage() {
   return (
     <main className="min-h-screen bg-ivory">
       <Navbar />
-      <section className="border-b border-bronze/10 bg-ivory-warm pt-28 sm:pt-32">
+      <section className="border-b border-bronze/10 bg-ivory-warm pt-32 sm:pt-36">
         <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
           <p className="text-xs tracking-[0.25em] text-bronze/70">DESTEK</p>
           <h1 className="mt-3 font-serif text-4xl text-bronze">Çerez Politikası</h1>

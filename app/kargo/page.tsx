@@ -3,8 +3,11 @@ import { PackageCheck, Truck } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
 import { getShopShippingPolicy } from '@/lib/shopify'
+import { mergeStorePolicyClaims } from '@/lib/policy-claims'
+import { getShopPolicyClaimsFromMetafield } from '@/lib/shopify-admin'
 
 export default async function KargoPage() {
+  const storeClaims = mergeStorePolicyClaims(await getShopPolicyClaimsFromMetafield())
   const shippingPolicy = await getShopShippingPolicy().catch(() => null)
   const hasPolicy = Boolean(shippingPolicy?.body)
   const normalizedTitle = (shippingPolicy?.title || '').trim().toLowerCase()
@@ -16,12 +19,12 @@ export default async function KargoPage() {
   return (
     <main className="min-h-screen bg-ivory">
       <Navbar />
-      <section className="border-b border-bronze/10 bg-ivory-warm pt-28 sm:pt-32">
+      <section className="border-b border-bronze/10 bg-ivory-warm pt-32 sm:pt-36">
         <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
           <p className="text-xs tracking-[0.25em] text-bronze/70">DESTEK</p>
           <h1 className="mt-3 font-serif text-4xl text-bronze">Kargo Bilgilendirmesi</h1>
           <p className="mt-4 max-w-3xl text-sm text-bronze/75 sm:text-base">
-            Bu sayfadaki bilgiler Shopify tarafındaki kargo ve teslimat politikanızdan otomatik olarak çekilir.
+            {storeClaims.shippingDispatchWindow} {storeClaims.shippingFinalCalculation}
           </p>
         </div>
       </section>
@@ -72,7 +75,7 @@ export default async function KargoPage() {
               <PackageCheck className="h-4 w-4" /> Sipariş takibi
             </div>
             <p className="text-sm text-bronze/75">
-              Siparişiniz kargoya verildiğinde takip numarası Shopify sipariş sürecinden iletilir.
+              {storeClaims.shippingDispatchWindow} Siparişiniz kargoya verildiğinde takip numarası paylaşılır.
             </p>
           </div>
         </div>

@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Search, User, ShoppingBag, Menu, X, LogIn, Heart, Package, Mail, ChevronRight, Minus, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useCart } from '@/components/storefront/cart-context'
+import { useCart, type CartItem } from '@/components/storefront/cart-context'
+import { CampaignCountdownBar } from '@/components/storefront/campaign-countdown-bar'
 
 type MenuCategory = {
   name: string
@@ -38,8 +39,8 @@ const fallbackDynamicMenuCategories: MenuCategory[] = [
 
 const accountLinks = [
   { name: 'Hesabım', href: '/account', icon: User },
-  { name: 'Favorilerim', href: '/account?tab=favorites', icon: Heart },
   { name: 'Siparişlerim', href: '/account?tab=orders', icon: Package },
+  { name: 'Favorilerim', href: '/account?tab=favorites', icon: Heart },
   { name: 'İletişim', href: '/iletisim', icon: Mail },
 ]
 
@@ -70,13 +71,16 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isMobileAccountMenuOpen, setIsMobileAccountMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [customerName, setCustomerName] = useState('')
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [dynamicCollections, setDynamicCollections] = useState<MenuCategory[]>([])
   const [searchProducts, setSearchProducts] = useState<SearchProduct[]>([])
-  const { items, totalItems, removeItem, updateItemQuantity, isDrawerOpen, setDrawerOpen } = useCart()
+  const [removedToast, setRemovedToast] = useState('')
+  const [lastRemovedItem, setLastRemovedItem] = useState<CartItem | null>(null)
+  const { items, totalItems, addItem, removeItem, updateItemQuantity, isDrawerOpen, setDrawerOpen } = useCart()
   const cartTotalAmount = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
 
   const menuCategories = useMemo(() => {
@@ -199,6 +203,58 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  useEffect(() => {
+    if (isMobileMenuOpen || isSearchOpen || isDrawerOpen) {
+      setIsMobileAccountMenuOpen(false)
+    }
+  }, [isMobileMenuOpen, isSearchOpen, isDrawerOpen])
+
+  useEffect(() => {
+    const onRemoved = (event: Event) => {
+      const customEvent = event as CustomEvent<{ item?: CartItem }>
+      const removedItem = customEvent.detail?.item || null
+      const productName = String(removedItem?.name || '').trim()
+      setLastRemovedItem(removedItem)
+      setRemovedToast(
+        productName
+          ? `${productName} sepetten çıkarıldı`
+          : 'Ürün sepetten çıkarıldı'
+      )
+    }
+
+    window.addEventListener('eftalia:cart-item-removed', onRemoved as EventListener)
+    return () => {
+      window.removeEventListener('eftalia:cart-item-removed', onRemoved as EventListener)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!removedToast) return
+    const timer = window.setTimeout(() => {
+      setRemovedToast('')
+      setLastRemovedItem(null)
+    }, 3600)
+    return () => window.clearTimeout(timer)
+  }, [removedToast])
+
+  const handleUndoRemove = () => {
+    if (!lastRemovedItem) return
+    addItem(
+      {
+        id: lastRemovedItem.id,
+        slug: lastRemovedItem.slug,
+        name: lastRemovedItem.name,
+        price: lastRemovedItem.price,
+        image: lastRemovedItem.image,
+        color: lastRemovedItem.color,
+        maxQuantity: lastRemovedItem.maxQuantity,
+      },
+      Math.max(1, Number(lastRemovedItem.quantity || 1))
+    )
+    setRemovedToast(`${lastRemovedItem.name} yeniden sepete eklendi`)
+    setLastRemovedItem(null)
+  }
+
   // Lock body scroll when full-screen panels are open
   useEffect(() => {
     if (isMobileMenuOpen || isSearchOpen || isDrawerOpen) {
@@ -259,10 +315,11 @@ export function Navbar() {
             : 'bg-transparent'
         }`}
       >
+        <CampaignCountdownBar />
         <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-20 items-center justify-between sm:h-24">
+          <div className="grid h-20 grid-cols-[1fr_auto_1fr] items-center sm:h-24">
             {/* Left - Hamburger Menu */}
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 items-center gap-4">
               <button 
                 className="group p-2 transition-colors hover:text-gold"
                 onClick={() => setIsMobileMenuOpen(true)}
@@ -273,23 +330,23 @@ export function Navbar() {
             </div>
 
             {/* Center - Brand Name */}
-            <Link href="/" className="flex flex-col items-center justify-center">
+            <Link href="/" className="z-[3] flex flex-col items-center justify-center">
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.3 }}
                 className="flex flex-col items-center"
               >
-                <h1 className="font-serif text-lg tracking-[0.35em] text-bronze-dark sm:text-xl md:text-2xl">
+                <h1 className="font-serif text-base leading-none tracking-[0.28em] text-bronze-dark sm:text-xl sm:tracking-[0.35em] md:text-2xl">
                   EFTALIA
                 </h1>
-                <span className="mt-0.5 text-[9px] tracking-[0.4em] text-rose sm:text-[10px] md:text-xs">
+                <span className="mt-1 text-[8px] leading-none tracking-[0.28em] text-rose sm:mt-0.5 sm:text-[10px] sm:tracking-[0.4em] md:text-xs">
                   LEATHER GOODS
                 </span>
               </motion.div>
             </Link>
 
             {/* Right - Search, Account & Cart */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-3">
               <button 
                 className="group p-2 transition-colors"
                 aria-label="Ürün ara"
@@ -297,6 +354,68 @@ export function Navbar() {
               >
                 <Search className="h-5 w-5 text-bronze transition-colors group-hover:text-gold" strokeWidth={1.5} />
               </button>
+              <div className="relative sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setIsMobileAccountMenuOpen((prev) => !prev)}
+                  className="flex items-center p-2"
+                  aria-label="Hesap menüsünü aç"
+                >
+                  <User className="h-5 w-5 text-bronze" strokeWidth={1.5} />
+                </button>
+
+                <AnimatePresence>
+                  {isMobileAccountMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute right-0 top-full z-[80] mt-2 w-60 overflow-hidden rounded-xl border border-bronze/15 bg-background/95 shadow-[0_18px_40px_rgba(76,56,36,0.18)] backdrop-blur-sm"
+                    >
+                      <div className="border-b border-bronze/10 bg-gradient-to-r from-ivory-warm to-background px-4 py-3">
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-bronze/55">
+                          {isAuthenticated ? 'Hesap Menüsü' : 'Hoş Geldiniz'}
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-bronze-dark">
+                          {isAuthenticated ? authLink.label : 'Hesabınıza giriş yapın'}
+                        </p>
+                      </div>
+                      <ul className="py-2">
+                        {desktopAccountLinks.map((item) => {
+                          const Icon = item.icon
+                          return (
+                            <li key={`mobile-account-${item.name}`}>
+                              <Link
+                                href={item.href}
+                                onClick={() => setIsMobileAccountMenuOpen(false)}
+                                className="flex items-center justify-between border-b border-bronze/10 px-4 py-3 text-sm text-bronze transition-colors hover:bg-ivory-warm hover:text-gold"
+                              >
+                                <span>{item.name}</span>
+                                <Icon className="h-4 w-4 text-bronze/40" strokeWidth={1.7} />
+                              </Link>
+                            </li>
+                          )
+                        })}
+                        {isAuthenticated ? (
+                          <li>
+                            <button
+                              onClick={() => {
+                                setIsMobileAccountMenuOpen(false)
+                                void handleLogout()
+                              }}
+                              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-rose transition-colors hover:bg-ivory-warm"
+                            >
+                              <span>Çıkış Yap</span>
+                              <ChevronRight className="h-4 w-4 text-rose/50" strokeWidth={1.7} />
+                            </button>
+                          </li>
+                        ) : null}
+                      </ul>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               <div className="group relative hidden sm:block">
                 <Link
                   href={authLink.href}
@@ -770,6 +889,32 @@ export function Navbar() {
             </motion.div>
           </>
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {removedToast ? (
+          <motion.div
+            initial={{ opacity: 0, y: -14, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed right-4 top-[5.4rem] z-[130] max-w-xs rounded-xl border border-[#d8b588]/45 bg-gradient-to-br from-[#fff7ea] via-[#fff3df] to-[#f7e5c4] px-4 py-3 shadow-[0_18px_42px_-18px_rgba(73,44,27,0.55)] backdrop-blur"
+          >
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[#8e6b48]">Eftalia Sepet</p>
+            <div className="mt-1 flex items-center gap-3">
+              <p className="text-sm font-semibold text-[#5B1F2A]">{removedToast}</p>
+              {lastRemovedItem ? (
+                <button
+                  type="button"
+                  onClick={handleUndoRemove}
+                  className="rounded-md border border-[#8e6b48]/30 bg-white/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#5B1F2A] transition-colors hover:bg-white"
+                >
+                  Geri Al
+                </button>
+              ) : null}
+            </div>
+          </motion.div>
+        ) : null}
       </AnimatePresence>
     </>
   )

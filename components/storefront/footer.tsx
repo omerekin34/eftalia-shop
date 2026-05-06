@@ -1,20 +1,40 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Instagram, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { PaymentTrustMarquee } from '@/components/storefront/payment-trust-marquee'
 
+const FEATURED_CATEGORY_TOKENS = [
+  'canta',
+  'suet canta',
+  'omuz cantasi',
+  'el cantasi',
+  'makyaj cantasi',
+  'laptop cantasi',
+  'spor cantasi',
+  'cuzdan ve kartliklar',
+  'cuzdan',
+  'kartlik',
+  'tarak',
+]
+
+const normalizeTr = (value: string) =>
+  value
+    .toLocaleLowerCase('tr')
+    .replace(/ç/g, 'c')
+    .replace(/ğ/g, 'g')
+    .replace(/ı/g, 'i')
+    .replace(/i̇/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ş/g, 's')
+    .replace(/ü/g, 'u')
+    .replace(/\s+/g, ' ')
+    .trim()
+
 const footerLinks = {
-  shop: [
-    { label: 'Tüm Ürünler', href: '/tum-urunler' },
-    { label: 'Çanta', href: '/tum-urunler?kategori=canta' },
-    { label: 'Cüzdan ve Kartlıklar', href: '/tum-urunler?kategori=cuzdan-kartlik' },
-    { label: 'Tarak', href: '/tum-urunler?kategori=tarak' },
-    { label: 'Yeni Gelenler', href: '/tum-urunler?filtre=yeni' },
-  ],
   about: [
     { label: 'Hikayemiz', href: '/hakkimizda/hikayemiz' },
     { label: 'Zanaatımız', href: '/hakkimizda/zanaatimiz' },
@@ -33,6 +53,51 @@ export function Footer() {
   const [email, setEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [shopLinks, setShopLinks] = useState<Array<{ label: string; href: string }>>([
+    { label: 'Tüm Ürünler', href: '/tum-urunler' },
+  ])
+
+  useEffect(() => {
+    const loadCollections = async () => {
+      try {
+        const response = await fetch('/api/storefront/collections', { cache: 'no-store' })
+        if (!response.ok) return
+
+        const data = (await response.json()) as {
+          collections?: Array<{ name?: string; href?: string }>
+        }
+        const dynamicLinks = (data.collections || [])
+          .map((collection) => ({
+            label: String(collection.name || '').trim(),
+            href: String(collection.href || '').trim(),
+          }))
+          .filter((collection) => collection.label && collection.href)
+
+        const featuredOnly = dynamicLinks
+          .map((collection) => {
+            const normalized = normalizeTr(collection.label)
+            const priority = FEATURED_CATEGORY_TOKENS.findIndex((token) =>
+              normalized.includes(token)
+            )
+            return { ...collection, priority }
+          })
+          .filter((collection) => collection.priority !== -1)
+          .sort((a, b) => a.priority - b.priority || a.label.localeCompare(b.label, 'tr'))
+          .filter((collection, index, arr) =>
+            arr.findIndex((item) => item.label === collection.label) === index
+          )
+          .slice(0, 8)
+          .map(({ label, href }) => ({ label, href }))
+
+        setShopLinks([{ label: 'Tüm Ürünler', href: '/tum-urunler' }, ...featuredOnly])
+      } catch {
+        // Fallback to default list if API fails
+        setShopLinks([{ label: 'Tüm Ürünler', href: '/tum-urunler' }])
+      }
+    }
+
+    loadCollections()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -137,7 +202,21 @@ export function Footer() {
             </motion.div>
             
             {/* Social links */}
-            <div className="mt-6 flex items-center gap-4">
+            <div className="mt-6">
+              <a
+                href="https://www.shopify.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-bronze/70"
+                aria-label="Shopify resmi sitesi"
+              >
+                Shopify
+              </a>
+              <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-bronze/45">
+                Powered by Shopify
+              </p>
+            </div>
+            <div className="mt-3 flex items-center gap-4">
               <a 
                 href="https://instagram.com" 
                 target="_blank"
@@ -179,9 +258,9 @@ export function Footer() {
 
           {/* Links columns */}
           <div>
-            <h4 className="text-xs font-medium tracking-[0.2em] text-bronze">ALIŞVERİŞ</h4>
+            <h4 className="text-xs font-medium tracking-[0.2em] text-bronze">ÖNE ÇIKAN KATEGORİLERİMİZ</h4>
             <ul className="mt-4 space-y-3">
-              {footerLinks.shop.map((link) => (
+              {shopLinks.map((link) => (
                 <li key={link.label}>
                   <Link 
                     href={link.href}

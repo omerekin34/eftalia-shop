@@ -36,7 +36,7 @@ export default function HakkimizdaPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="pb-20 pt-28 sm:pt-32">
+      <main className="pb-20 pt-32 sm:pt-36">
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 16 }}

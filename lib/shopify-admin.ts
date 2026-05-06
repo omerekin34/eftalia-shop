@@ -1,4 +1,5 @@
 import 'server-only'
+import type { StorePolicyClaims } from '@/lib/policy-claims'
 
 function normalizeShopifyStoreDomain(raw: string | undefined): string {
   if (!raw) return ''
@@ -90,6 +91,26 @@ const ACTIVE_DISCOUNT_CODES_QUERY = /* GraphQL */ `
   }
 `
 
+const SHOP_CAMPAIGN_BANNER_QUERY = /* GraphQL */ `
+  query ShopCampaignBanner($namespace: String!, $key: String!) {
+    shop {
+      metafield(namespace: $namespace, key: $key) {
+        value
+      }
+    }
+  }
+`
+
+const SHOP_POLICY_CLAIMS_QUERY = /* GraphQL */ `
+  query ShopPolicyClaims($namespace: String!, $key: String!) {
+    shop {
+      metafield(namespace: $namespace, key: $key) {
+        value
+      }
+    }
+  }
+`
+
 const METAFIELDS_SET_MUTATION = /* GraphQL */ `
   mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
     metafieldsSet(metafields: $metafields) {
@@ -153,6 +174,23 @@ const ORDER_FULFILLMENT_LINE_ITEMS_QUERY = /* GraphQL */ `
               id
               quantity
             }
+          }
+        }
+      }
+    }
+  }
+`
+
+const ORDERS_DISPLAY_FULFILLMENT_STATUS_QUERY = /* GraphQL */ `
+  query OrdersDisplayFulfillmentStatus($first: Int!, $query: String!) {
+    orders(first: $first, query: $query) {
+      nodes {
+        name
+        displayFulfillmentStatus
+        fulfillments(first: 10) {
+          nodes {
+            displayStatus
+            status
           }
         }
       }
@@ -722,4 +760,109 @@ export async function createShopifyReturnRequest(
   }
 
   return { ok: true, returnId, returnName: returnName || returnId }
+}
+
+export async function getOrdersDisplayFulfillmentStatusByOrderNumbers(orderNumbers: number[]) {
+  const uniqueNumbers = Array.from(
+    new Set(
+      (Array.isArray(orderNumbers) ? orderNumbers : [])
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0)
+        .map((value) => Math.floor(value))
+    )
+  )
+  if (!uniqueNumbers.length) return new Map<number, string>()
+
+  const query = uniqueNumbers.map((n) => `name:#${n}`).join(' OR ')
+  const data = await adminGraphqlFetch<{
+    orders?: {
+      nodes?: Array<{
+        name?: string | null
+        displayFulfillmentStatus?: string | null
+        fulfillments?: {
+          nodes?: Array<{
+            displayStatus?: string | null
+            status?: string | null
+          } | null>
+        } | null
+      } | null>
+    } | null
+  }>(ORDERS_DISPLAY_FULFILLMENT_STATUS_QUERY, {
+    first: Math.max(10, uniqueNumbers.length + 5),
+    query,
+  })
+  if (!data?.orders?.nodes?.length) return new Map<number, string>()
+
+  const statusMap = new Map<number, string>()
+  for (const node of data.orders.nodes) {
+    const orderName = String(node?.name || '').trim()
+    const matchedOrderNumber = Number(orderName.replace(/[^\d]/g, ''))
+    if (!Number.isFinite(matchedOrderNumber) || matchedOrderNumber <= 0) continue
+
+    const latestFulfillmentDisplayStatus = String(
+      node?.fulfillments?.nodes?.[0]?.displayStatus || node?.fulfillments?.nodes?.[0]?.status || ''
+    )
+      .trim()
+      .toUpperCase()
+    const displayFulfillmentStatus = String(node?.displayFulfillmentStatus || '')
+      .trim()
+      .toUpperCase()
+    const resolvedStatus = latestFulfillmentDisplayStatus || displayFulfillmentStatus
+    if (resolvedStatus) {
+      statusMap.set(Math.floor(matchedOrderNumber), resolvedStatus)
+    }
+  }
+
+  return statusMap
+}
+
+export type CampaignBannerConfig = {
+  enabled?: boolean
+  message?: string
+  messages?: string[]
+  countdownTitle?: string
+  endAtIso?: string
+  ctaLabel?: string
+  ctaAction?: 'spin-wheel' | 'link'
+  ctaHref?: string
+}
+
+export async function getShopCampaignBannerConfigFromMetafield(
+  namespace = 'custom',
+  key = 'campaign_banner'
+): Promise<CampaignBannerConfig | null> {
+  const data = await adminGraphqlFetch<{
+    shop?: { metafield?: { value?: string | null } | null } | null
+  }>(SHOP_CAMPAIGN_BANNER_QUERY, { namespace, key })
+
+  const raw = String(data?.shop?.metafield?.value || '').trim()
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as CampaignBannerConfig
+    if (!parsed || typeof parsed !== 'object') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+export async function getShopPolicyClaimsFromMetafield(
+  namespace = 'custom',
+  key = 'policy_claims'
+): Promise<Partial<StorePolicyClaims> | null> {
+  const data = await adminGraphqlFetch<{
+    shop?: { metafield?: { value?: string | null } | null } | null
+  }>(SHOP_POLICY_CLAIMS_QUERY, { namespace, key })
+
+  const raw = String(data?.shop?.metafield?.value || '').trim()
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<StorePolicyClaims>
+    if (!parsed || typeof parsed !== 'object') return null
+    return parsed
+  } catch {
+    return null
+  }
 }

@@ -6,8 +6,12 @@ import { motion } from 'framer-motion'
 import { Mail, Phone, MapPin, Clock, Send, MessageCircle } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
+import {
+  DEFAULT_STORE_POLICY_CLAIMS,
+  mergeStorePolicyClaims,
+  type StorePolicyClaims,
+} from '@/lib/policy-claims'
 
-const supportEmail = 'eftalia.case.destek@gmail.com'
 const supportPhone = '+90 (552) 713 82 13'
 const formspreeEndpoint = process.env.NEXT_PUBLIC_FORMSPREE_ENDPOINT || ''
 
@@ -20,6 +24,7 @@ type PolicyResponse = {
 export default function ContactPage() {
   const [shippingPolicy, setShippingPolicy] = useState<PolicyResponse | null>(null)
   const [refundPolicy, setRefundPolicy] = useState<PolicyResponse | null>(null)
+  const [policyClaims, setPolicyClaims] = useState<StorePolicyClaims>(DEFAULT_STORE_POLICY_CLAIMS)
   const [isSubmittingContact, setIsSubmittingContact] = useState(false)
   const [contactFeedback, setContactFeedback] = useState('')
   const [contactForm, setContactForm] = useState({
@@ -62,11 +67,29 @@ export default function ContactPage() {
     }
   }, [])
 
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const response = await fetch('/api/storefront/policy-claims', { cache: 'no-store' })
+        const data = (await response.json()) as Partial<StorePolicyClaims>
+        if (!active) return
+        setPolicyClaims(mergeStorePolicyClaims(data))
+      } catch {
+        if (!active) return
+        setPolicyClaims(DEFAULT_STORE_POLICY_CLAIMS)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
+
   const contactCards = useMemo(
     () => [
       {
         title: 'E-Posta',
-        value: supportEmail,
+        value: policyClaims.supportEmail,
         detail: '24 saat içinde dönüş sağlanır',
         icon: Mail,
       },
@@ -83,7 +106,7 @@ export default function ContactPage() {
         icon: MapPin,
       },
     ],
-    []
+    [policyClaims.supportEmail]
   )
 
   const hoursTitle = 'Çalışma Saatleri'
@@ -157,7 +180,7 @@ export default function ContactPage() {
     <main className="min-h-screen bg-ivory">
       <Navbar />
 
-      <section className="border-b border-bronze/10 bg-ivory-warm pt-28 sm:pt-32">
+      <section className="border-b border-bronze/10 bg-ivory-warm pt-32 sm:pt-36">
         <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8 lg:pb-16">
           <motion.p
             initial={{ opacity: 0, y: 12 }}
@@ -227,9 +250,9 @@ export default function ContactPage() {
       <section className="mx-auto max-w-7xl px-4 pb-2 sm:px-6 lg:px-8">
         <div className="grid gap-4 lg:grid-cols-2">
           <article className="rounded-xl border border-bronze/10 bg-white p-5">
-            <h3 className="font-serif text-xl text-bronze-dark">Canlı Kargo Politikası</h3>
+            <h3 className="font-serif text-xl text-bronze-dark">Kargo Politikası</h3>
             <p className="mt-2 text-sm text-bronze/70">
-              {shippingPolicy?.excerpt || 'Kargo politikanız Shopify üzerinden güncellendiğinde buraya yansır.'}
+              {shippingPolicy?.excerpt || policyClaims.shippingDispatchWindow}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link
@@ -239,22 +262,17 @@ export default function ContactPage() {
                 Sitede Gör
               </Link>
               {shippingPolicy?.url ? (
-                <Link
-                  href={shippingPolicy.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-md border border-bronze/20 px-3 py-2 text-xs font-medium uppercase tracking-wide text-bronze transition-colors hover:bg-ivory-warm"
-                >
+                <span className="rounded-md border border-bronze/20 px-3 py-2 text-xs font-medium uppercase tracking-wide text-bronze">
                   Shopify Kaynağı
-                </Link>
+                </span>
               ) : null}
             </div>
           </article>
 
           <article className="rounded-xl border border-bronze/10 bg-white p-5">
-            <h3 className="font-serif text-xl text-bronze-dark">Canlı İade Politikası</h3>
+            <h3 className="font-serif text-xl text-bronze-dark">İade Politikası</h3>
             <p className="mt-2 text-sm text-bronze/70">
-              {refundPolicy?.excerpt || 'İade politikanız Shopify üzerinden güncellendiğinde buraya yansır.'}
+              {refundPolicy?.excerpt || policyClaims.returnWindow}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link
@@ -264,14 +282,9 @@ export default function ContactPage() {
                 Sitede Gör
               </Link>
               {refundPolicy?.url ? (
-                <Link
-                  href={refundPolicy.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-md border border-bronze/20 px-3 py-2 text-xs font-medium uppercase tracking-wide text-bronze transition-colors hover:bg-ivory-warm"
-                >
+                <span className="rounded-md border border-bronze/20 px-3 py-2 text-xs font-medium uppercase tracking-wide text-bronze">
                   Shopify Kaynağı
-                </Link>
+                </span>
               ) : null}
             </div>
           </article>
@@ -382,8 +395,11 @@ export default function ContactPage() {
           <div className="rounded-2xl border border-bronze/10 bg-white p-6">
             <h4 className="mb-3 text-sm font-semibold tracking-wide text-bronze">Hızlı Destek Kanalları</h4>
             <div className="space-y-2 text-sm">
-              <a href={`mailto:${supportEmail}`} className="block text-bronze/80 underline-offset-2 hover:underline">
-                E-posta: {supportEmail}
+              <a
+                href={`mailto:${policyClaims.supportEmail}`}
+                className="block text-bronze/80 underline-offset-2 hover:underline"
+              >
+                E-posta: {policyClaims.supportEmail}
               </a>
               <a href={`tel:${supportPhone.replace(/\s+/g, '')}`} className="block text-bronze/80 underline-offset-2 hover:underline">
                 Telefon: {supportPhone}

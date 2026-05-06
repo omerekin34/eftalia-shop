@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getCustomerDetails, getCustomerOrders } from '@/lib/shopify'
+import { getOrdersDisplayFulfillmentStatusByOrderNumbers } from '@/lib/shopify-admin'
 import { AccountDashboardClient } from '@/components/storefront/account-dashboard-client'
 import type { ServiceTicket } from '@/components/storefront/account-service-requests-panel'
 
@@ -39,6 +40,22 @@ export default async function AccountPage() {
     redirect('/giris')
   }
 
+  const orderNumbers = orders
+    .map((order) => Number(order?.orderNumber))
+    .filter((value) => Number.isFinite(value) && value > 0)
+  const displayStatusByOrderNumber = await getOrdersDisplayFulfillmentStatusByOrderNumbers(orderNumbers)
+  const enrichedOrders = orders.map((order) => {
+    const orderNumber = Number(order?.orderNumber)
+    const displayFulfillmentStatus =
+      Number.isFinite(orderNumber) && orderNumber > 0
+        ? displayStatusByOrderNumber.get(Math.floor(orderNumber)) || null
+        : null
+    return {
+      ...order,
+      displayFulfillmentStatus,
+    }
+  })
+
   return (
     <AccountDashboardClient
       customer={{
@@ -46,7 +63,7 @@ export default async function AccountPage() {
         returnTickets: asTicketList(customer.returnTickets),
         cancelTickets: asTicketList(customer.cancelTickets),
       }}
-      orders={orders}
+      orders={enrichedOrders}
     />
   )
 }

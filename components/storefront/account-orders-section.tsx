@@ -26,6 +26,7 @@ export type AccountOrder = {
   processedAt?: string
   financialStatus?: string | null
   fulfillmentStatus?: string | null
+  displayFulfillmentStatus?: string | null
   totalPrice?: {
     amount?: string
     currencyCode?: string
@@ -54,32 +55,66 @@ function formatOrderDate(date?: string) {
   }).format(new Date(date))
 }
 
-function fulfillmentBadge(status?: string | null) {
-  const s = (status || '').toUpperCase()
-  if (s === 'FULFILLED') {
-    return {
-      label: 'Kargolandı',
+function fulfillmentBadge(status?: string | null, displayStatus?: string | null) {
+  const normalizedDisplayStatus = (displayStatus || '').toUpperCase()
+  const normalizedStatus = (status || '').toUpperCase()
+  const s = normalizedDisplayStatus || normalizedStatus
+  const prettyRawStatus = (displayStatus || status || '').replace(/_/g, ' ').trim()
+
+  const statusMap: Record<
+    string,
+    { label: string; className: string }
+  > = {
+    DELIVERED: {
+      label: 'Teslim edildi',
+      className:
+        'border-emerald-300/80 bg-emerald-100 text-emerald-950 shadow-[0_6px_16px_-10px_rgba(6,95,70,0.45)]',
+    },
+    FULFILLED: {
+      label: 'Kargoya verildi',
       className:
         'border-emerald-200/80 bg-emerald-50 text-emerald-900 shadow-[0_6px_16px_-10px_rgba(6,95,70,0.45)]',
-    }
-  }
-  if (s === 'PARTIALLY_FULFILLED') {
-    return {
+    },
+    PARTIALLY_FULFILLED: {
       label: 'Kısmen kargoda',
       className: 'border-amber-200/90 bg-amber-50 text-amber-950',
-    }
+    },
+    IN_PROGRESS: {
+      label: 'Hazırlanıyor',
+      className: 'border-[#c4a574]/50 bg-[#fff9ef] text-[#5c4328]',
+    },
+    UNFULFILLED: {
+      label: 'Hazırlanıyor',
+      className: 'border-[#c4a574]/50 bg-[#fff9ef] text-[#5c4328]',
+    },
+    ON_HOLD: {
+      label: 'İşlem bekliyor',
+      className: 'border-zinc-200 bg-zinc-50 text-zinc-700',
+    },
+    SCHEDULED: {
+      label: 'Planlandı',
+      className: 'border-sky-200 bg-sky-50 text-sky-900',
+    },
+    RESTOCKED: {
+      label: 'Depoya iade',
+      className: 'border-zinc-200 bg-zinc-50 text-zinc-700',
+    },
+    OPEN: {
+      label: 'Açık sipariş',
+      className: 'border-[#c4a574]/50 bg-[#fff9ef] text-[#5c4328]',
+    },
   }
-  if (s === 'IN_PROGRESS' || s === 'UNFULFILLED' || s === '') {
+
+  if (statusMap[s]) return statusMap[s]
+  if (!s) {
     return {
-      label: s === 'IN_PROGRESS' ? 'İşleniyor' : 'Hazırlanıyor',
+      label: 'Hazırlanıyor',
       className: 'border-[#c4a574]/50 bg-[#fff9ef] text-[#5c4328]',
     }
   }
-  if (s === 'RESTOCKED') {
-    return { label: 'Depoya iade', className: 'border-zinc-200 bg-zinc-50 text-zinc-700' }
-  }
+
   return {
-    label: status?.replace(/_/g, ' ') || 'Durum',
+    label: `Shopify: ${prettyRawStatus || 'Durum'}`,
     className: 'border-[#9b7a57]/30 bg-white text-[#6d4f35]',
   }
 }
@@ -166,7 +201,7 @@ export function AccountOrdersSection({
 
       <ul className="space-y-5">
         {orders.map((order) => {
-          const fb = fulfillmentBadge(order.fulfillmentStatus)
+          const fb = fulfillmentBadge(order.fulfillmentStatus, order.displayFulfillmentStatus)
           const fin = financialLabel(order.financialStatus)
           return (
             <li key={order.id}>

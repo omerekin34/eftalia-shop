@@ -2,19 +2,22 @@ import Link from 'next/link'
 import { RefreshCw, ShieldCheck, CalendarClock, ClipboardCheck } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
+import { mergeStorePolicyClaims } from '@/lib/policy-claims'
+import { getShopPolicyClaimsFromMetafield } from '@/lib/shopify-admin'
 
 export default async function IadePage() {
-  const supportEmail = 'eftalia.case.destek@gmail.com'
+  const storeClaims = mergeStorePolicyClaims(await getShopPolicyClaimsFromMetafield())
+  const supportEmail = storeClaims.supportEmail
 
   return (
     <main className="min-h-screen bg-ivory">
       <Navbar />
-      <section className="border-b border-bronze/10 bg-ivory-warm pt-28 sm:pt-32">
+      <section className="border-b border-bronze/10 bg-ivory-warm pt-32 sm:pt-36">
         <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
           <p className="text-xs tracking-[0.25em] text-bronze/70">DESTEK</p>
           <h1 className="mt-3 font-serif text-4xl text-bronze">İade ve Değişim</h1>
           <p className="mt-4 max-w-3xl text-sm text-bronze/75 sm:text-base">
-            İade süreçlerinizi aşağıdaki şartlara göre hızlıca başlatabilirsiniz.
+            {storeClaims.returnWindow} {storeClaims.returnCondition}
           </p>
         </div>
       </section>
@@ -28,7 +31,7 @@ export default async function IadePage() {
           <article className="mt-6 space-y-6 text-sm leading-relaxed text-bronze/80 sm:text-base">
             <div>
               <p>
-                Ürününüzü teslim aldıktan sonra <strong>30 gün</strong> içinde iade talebinde bulunabilirsiniz.
+                {storeClaims.returnWindow}
               </p>
             </div>
 
@@ -55,7 +58,7 @@ export default async function IadePage() {
                 oluşturulmadan gönderilen ürünler kabul edilmez.
               </p>
               <p>
-                İadelerle ilgili tüm sorularınız için:{' '}
+                İade ve değişim sorularınız için:{' '}
                 <a className="underline underline-offset-2" href={`mailto:${supportEmail}`}>
                   {supportEmail}
                 </a>
@@ -104,9 +107,8 @@ export default async function IadePage() {
             <div>
               <h3 className="font-serif text-xl text-bronze-dark">Para İadesi</h3>
               <p className="mt-2">
-                İade ürününüz tarafımıza ulaşıp incelendikten sonra, iadenizin onay durumu size bildirilir. Onaylanan
-                iadelerde ücret, <strong>10 iş günü</strong> içinde orijinal ödeme yöntemine otomatik olarak iade
-                edilir.
+                İade ürününüz tarafımıza ulaşıp incelendikten sonra, iadenizin onay durumu size bildirilir.{' '}
+                {storeClaims.refundWindow}
               </p>
               <p className="mt-2">
                 Bankanızın veya kart sağlayıcınızın işlem süresi ek zaman alabilir. İade onayından sonra{' '}

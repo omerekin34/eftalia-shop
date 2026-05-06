@@ -28,6 +28,15 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | undefined>(undefined)
 const CART_STORAGE_KEY = 'eftelia_cart_items'
 
+function emitCartItemRemoved(item: CartItem) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent('eftalia:cart-item-removed', {
+      detail: { item },
+    })
+  )
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isDrawerOpen, setDrawerOpen] = useState(false)
@@ -79,17 +88,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           : quantity
       return [...prev, { ...item, quantity: safeQuantity }]
     })
+    setDrawerOpen(true)
   }
 
   const removeItem = (itemId: string, color?: string) => {
-    setItems((prev) =>
-      prev.filter(
-        (entry) => !(entry.id === itemId && entry.color === color)
-      )
-    )
+    const removedEntry = items.find((entry) => entry.id === itemId && entry.color === color)
+    if (removedEntry) {
+      window.setTimeout(() => emitCartItemRemoved(removedEntry), 0)
+    }
+    setItems((prev) => prev.filter((entry) => !(entry.id === itemId && entry.color === color)))
   }
 
   const updateItemQuantity = (itemId: string, color: string | undefined, quantity: number) => {
+    const targetEntry = items.find((entry) => entry.id === itemId && entry.color === color)
+    if (targetEntry && quantity <= 0) {
+      window.setTimeout(() => emitCartItemRemoved(targetEntry), 0)
+    }
+
     setItems((prev) =>
       prev
         .map((entry) => {

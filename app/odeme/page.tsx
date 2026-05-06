@@ -8,6 +8,11 @@ import { Loader2, Lock, MapPin, ShieldCheck, Sparkles, Truck } from 'lucide-reac
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
 import { useCart } from '@/components/storefront/cart-context'
+import {
+  DEFAULT_STORE_POLICY_CLAIMS,
+  mergeStorePolicyClaims,
+  type StorePolicyClaims,
+} from '@/lib/policy-claims'
 
 type CheckoutSavedAddress = {
   id: string
@@ -37,6 +42,7 @@ export default function OdemePage() {
   const [defaultAddressId, setDefaultAddressId] = useState('')
   const [selectedCustomerAddressId, setSelectedCustomerAddressId] = useState('')
   const [shippingPolicy, setShippingPolicy] = useState<ShippingPolicySummary>(null)
+  const [policyClaims, setPolicyClaims] = useState<StorePolicyClaims>(DEFAULT_STORE_POLICY_CLAIMS)
   const attemptRef = useRef<string | null>(null)
 
   const linesKey = useMemo(
@@ -74,6 +80,22 @@ export default function OdemePage() {
         }
       } finally {
         if (!cancelled) setAddressesLoaded(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const response = await fetch('/api/storefront/policy-claims', { cache: 'no-store' })
+        const data = (await response.json()) as Partial<StorePolicyClaims>
+        if (!cancelled) setPolicyClaims(mergeStorePolicyClaims(data))
+      } catch {
+        if (!cancelled) setPolicyClaims(DEFAULT_STORE_POLICY_CLAIMS)
       }
     })()
     return () => {
@@ -169,7 +191,7 @@ export default function OdemePage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="pb-20 pt-28 sm:pt-32">
+      <main className="pb-20 pt-32 sm:pt-36">
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <nav className="flex items-center gap-2 text-sm text-bronze/60">
@@ -312,7 +334,7 @@ export default function OdemePage() {
                         </span>
                       </div>
                       <p className="mt-2 text-sm leading-relaxed text-bronze/75">
-                        Kargo yöntemi, ücret ve tahmini teslim süresi resmi Shopify ödeme ekranında seçilir ve kesinleşir.
+                        {policyClaims.shippingFinalCalculation}
                       </p>
                       {shippingPolicy?.excerpt ? (
                         <p className="mt-2 rounded-lg border border-bronze/15 bg-white/80 px-3 py-2 text-xs leading-relaxed text-bronze/70">
@@ -470,8 +492,8 @@ export default function OdemePage() {
                 </div>
                 <p className="text-[11px] leading-relaxed text-bronze/50">
                   {shippingPolicy?.excerpt
-                    ? `${shippingPolicy.excerpt} Kesin kargo ücreti ve teslimat seçenekleri Shopify ödeme adımında hesaplanır.`
-                    : 'Kesin kargo ücreti, kargo yöntemi, vergi ve indirimler Shopify ödeme adımında hesaplanır.'}
+                    ? `${shippingPolicy.excerpt} ${policyClaims.shippingFinalCalculation}`
+                    : policyClaims.shippingFinalCalculation}
                 </p>
                 <div className="flex items-center justify-between pt-1 text-base font-semibold text-bronze-dark">
                   <span>Genel toplam (tahmini)</span>

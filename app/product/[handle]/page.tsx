@@ -137,7 +137,7 @@ export default async function ProductByHandlePage({ params, searchParams }: Page
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="pb-32 pt-24">
+      <main className="pb-32 pt-32 sm:pt-36">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <nav className="flex items-center gap-2 text-sm text-bronze/60">
             <Link href="/" className="transition-colors hover:text-bronze">

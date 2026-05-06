@@ -217,7 +217,7 @@ function LoginPageContent() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="pb-20 pt-28 sm:pt-32">
+      <main className="pb-20 pt-32 sm:pt-36">
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <nav className="flex items-center gap-2 text-sm text-bronze/60">

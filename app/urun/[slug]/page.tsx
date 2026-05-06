@@ -458,7 +458,7 @@ export default function ProductDetailPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="pb-20 pt-24">
+      <main className="pb-20 pt-32 sm:pt-36">
         {/* Breadcrumb */}
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <nav className="flex items-center gap-2 text-sm text-bronze/60">

@@ -21,13 +21,13 @@ type SidebarEntry =
 const sidebarEntries: SidebarEntry[] = [
   { type: 'tab', key: 'dashboard', label: 'Hesabım', icon: User },
   { type: 'tab', key: 'orders', label: 'Siparişlerim', icon: Package },
+  { type: 'tab', key: 'favorites', label: 'Favorilerim', icon: Heart },
   { type: 'tab', key: 'returns', label: 'İade Taleplerim', icon: RotateCcw },
   { type: 'tab', key: 'cancellations', label: 'İptal Taleplerim', icon: Ban },
   { type: 'tab', key: 'profile', label: 'Üyelik Bilgilerim', icon: UserCog },
   { type: 'tab', key: 'addresses', label: 'Adres Defterim', icon: MapPin },
   { type: 'link', href: '/account/reviews', label: 'Değerlendirmelerim', icon: Star },
   { type: 'tab', key: 'coupons', label: 'Kuponlarım', icon: TicketPercent },
-  { type: 'tab', key: 'favorites', label: 'Favorilerim', icon: Heart },
 ]
 
 function tabHref(key: AccountNavTabKey) {
@@ -46,7 +46,13 @@ function getTabFromParam(value: string | null): AccountNavTabKey {
   return 'dashboard'
 }
 
-export function AccountSidebar() {
+export function AccountSidebar({
+  className = '',
+  onNavigate,
+}: {
+  className?: string
+  onNavigate?: () => void
+}) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const onReviewsPage = pathname === '/account/reviews'
@@ -63,14 +69,14 @@ export function AccountSidebar() {
     }`
 
   return (
-    <aside className="rounded-2xl border border-[#9b7a57]/25 bg-[#fffaf2] p-4">
+    <aside className={`rounded-2xl border border-[#9b7a57]/25 bg-[#fffaf2] p-4 ${className}`.trim()}>
       <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-[#8a6b4b]">Hesap Menüsü</h2>
       <div className="space-y-1.5">
         {sidebarEntries.map((entry) => {
           if (entry.type === 'link') {
             const isActive = onReviewsPage
             return (
-              <Link key={entry.href} href={entry.href} className={itemClass(isActive)}>
+              <Link key={entry.href} href={entry.href} className={itemClass(isActive)} onClick={onNavigate}>
                 <entry.icon className="h-4 w-4 shrink-0" />
                 {entry.label}
               </Link>
@@ -78,7 +84,13 @@ export function AccountSidebar() {
           }
           const isActive = !onReviewsPage && activeTab === entry.key
           return (
-            <Link key={entry.key} href={tabHref(entry.key)} scroll={false} className={itemClass(isActive)}>
+            <Link
+              key={entry.key}
+              href={tabHref(entry.key)}
+              scroll={false}
+              className={itemClass(isActive)}
+              onClick={onNavigate}
+            >
               <entry.icon className="h-4 w-4 shrink-0" />
               {entry.label}
             </Link>

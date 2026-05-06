@@ -120,7 +120,6 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="mb-6 flex items-end justify-between">
             <div>
-              <p className="text-xs tracking-[0.25em] text-bronze/60">SHOPIFY LIVE</p>
               <h2 className="mt-2 font-serif text-2xl text-bronze sm:text-3xl">
                 Eftalia Seçkisi
               </h2>

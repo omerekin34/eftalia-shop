@@ -6,6 +6,11 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Check, Minus, Plus, RefreshCcw, ShieldCheck, Sparkles, Star, Truck, X, MessageCircle } from 'lucide-react'
 import { useCart } from '@/components/storefront/cart-context'
+import {
+  DEFAULT_STORE_POLICY_CLAIMS,
+  mergeStorePolicyClaims,
+  type StorePolicyClaims,
+} from '@/lib/policy-claims'
 
 type ProductVariant = {
   id: string
@@ -114,6 +119,7 @@ export function ProductDetailClient({
   const [reviewError, setReviewError] = useState('')
   const [toastMessage, setToastMessage] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [policyClaims, setPolicyClaims] = useState<StorePolicyClaims>(DEFAULT_STORE_POLICY_CLAIMS)
 
   const colorOption = product.options.find((option) =>
     ['renk', 'color'].includes((option.name || '').toLocaleLowerCase('tr'))
@@ -278,6 +284,22 @@ export function ProductDetailClient({
     }
 
     loadSession()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const response = await fetch('/api/storefront/policy-claims', { cache: 'no-store' })
+        const data = (await response.json()) as Partial<StorePolicyClaims>
+        if (!cancelled) setPolicyClaims(mergeStorePolicyClaims(data))
+      } catch {
+        if (!cancelled) setPolicyClaims(DEFAULT_STORE_POLICY_CLAIMS)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const hasReviews = Number(product.reviewRating || 0) > 0 && Number(product.reviewRatingCount || 0) > 0
@@ -583,14 +605,14 @@ export function ProductDetailClient({
               <Truck className="mt-0.5 h-4 w-4 text-bronze" />
               <div>
                 <p className="font-semibold text-bronze-dark">Ücretsiz Kargo</p>
-                <p className="mt-0.5 text-[11px] text-bronze/65">Belirli tutar üzeri siparişlerde hızlı ve ücretsiz teslimat.</p>
+                <p className="mt-0.5 text-[11px] text-bronze/65">{policyClaims.shippingDispatchWindow}</p>
               </div>
             </div>
             <div className="flex items-start gap-2 rounded-lg border border-bronze/10 bg-white/80 p-3 text-xs text-bronze/80">
               <RefreshCcw className="mt-0.5 h-4 w-4 text-bronze" />
               <div>
                 <p className="font-semibold text-bronze-dark">Kolay İade Süreci</p>
-                <p className="mt-0.5 text-[11px] text-bronze/65">Uygun ürünlerde pratik iade ve değişim desteği.</p>
+                <p className="mt-0.5 text-[11px] text-bronze/65">{policyClaims.returnWindow}</p>
               </div>
             </div>
             <div className="flex items-start gap-2 rounded-lg border border-bronze/10 bg-white/80 p-3 text-xs text-bronze/80">
