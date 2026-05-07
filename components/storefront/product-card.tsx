@@ -120,7 +120,7 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
         {isLowStock && (
-          <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-r from-[#7B1E2B] via-[#a02a3b] to-[#7B1E2B] px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.65)] sm:text-xs">
+          <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-r from-[#7B1E2B] via-[#a02a3b] to-[#7B1E2B] px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.65)] sm:py-2 sm:text-xs">
             Son {lowStockCount} Ürün - Tükenmeden Al
           </div>
         )}
@@ -157,8 +157,8 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Color Variants - Bottom of image */}
         {product.colors.length > 1 && (
           <div
-            className={`absolute right-2 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 shadow-sm sm:right-3 ${
-              isLowStock ? 'bottom-10 sm:bottom-11' : 'bottom-2 sm:bottom-3'
+            className={`absolute right-2 z-20 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 shadow-sm sm:right-3 ${
+              isLowStock ? 'bottom-14 sm:bottom-11' : 'bottom-2 sm:bottom-3'
             }`}
           >
             {product.colors.slice(0, 3).map((color) => (
@@ -197,8 +197,8 @@ export function ProductCard({ product }: ProductCardProps) {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 10 }}
-          className={`absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-bronze/90 px-3 py-1.5 text-xs text-white shadow-lg ${
-            isLowStock ? 'bottom-[4.75rem] sm:bottom-[5.25rem]' : 'bottom-12 sm:bottom-14'
+          className={`absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded bg-bronze/90 px-3 py-1.5 text-xs text-white shadow-lg ${
+            isLowStock ? 'bottom-[5.5rem] sm:bottom-[5.25rem]' : 'bottom-12 sm:bottom-14'
           }`}
         >
           {product.name} {selectedColor.name}

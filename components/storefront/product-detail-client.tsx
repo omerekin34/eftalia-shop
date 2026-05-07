@@ -230,7 +230,8 @@ export function ProductDetailClient({
         color: selectedColor || undefined,
         maxQuantity: maxSelectableQuantity,
       },
-      quantity
+      quantity,
+      false
     )
     router.push('/odeme')
   }
@@ -417,7 +418,7 @@ export function ProductDetailClient({
         )}
 
         {embeddableVideoUrl ? (
-          <section className="rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5">
+          <section className="hidden rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5 lg:block">
             <p className="text-xs uppercase tracking-[0.2em] text-bronze/70">Ürün Tanıtım Videosu</p>
             <div className="mt-4 overflow-hidden rounded-xl border border-bronze/15 bg-black/90 shadow-[0_18px_34px_-26px_rgba(28,20,15,0.75)]">
               {isExternalEmbed ? (
@@ -447,19 +448,11 @@ export function ProductDetailClient({
                 </div>
               )}
             </div>
-            <a
-              href={String(product.videoUrl || embeddableVideoUrl)}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex text-xs font-medium text-bronze/75 underline underline-offset-4 hover:text-bronze"
-            >
-              Video açılmazsa yeni sekmede aç
-            </a>
           </section>
         ) : null}
 
         {productSpecs.length > 0 ? (
-          <section className="rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5">
+          <section className="hidden rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5 lg:block">
             <p className="mb-3 text-xs uppercase tracking-[0.2em] text-bronze/70">Ürün Özellikleri</p>
             <div className="divide-y divide-bronze/10">
               {productSpecs.map((field) => (
@@ -483,7 +476,7 @@ export function ProductDetailClient({
           {product.subcategory || 'Premium Koleksiyon'}
         </p>
         <h1 className="mt-3 font-serif text-3xl text-bronze-dark sm:text-5xl">{product.name}</h1>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
           <span className="font-semibold text-bronze-dark">
             {hasValidReviewRating ? parsedReviewRating.toFixed(1) : isRatingPending ? 'Yükleniyor' : '0.0'}
           </span>
@@ -510,7 +503,7 @@ export function ProductDetailClient({
           {isRatingPending ? <span className="text-xs text-bronze/60">(puan güncelleniyor)</span> : null}
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <span className="text-4xl font-bold text-[#111111]">{formatPrice(displayPrice)}</span>
           {hasDiscount ? (
             <span className="text-lg text-zinc-400 line-through">{formatPrice(displayCompare)}</span>
@@ -522,7 +515,7 @@ export function ProductDetailClient({
           ) : null}
         </div>
 
-        <p className="mt-7 max-w-xl text-sm leading-relaxed text-bronze/75 sm:text-base">{product.description}</p>
+        <p className="mt-5 max-w-xl text-sm leading-relaxed text-bronze/75 sm:text-base">{product.description}</p>
 
         {colorValues.length > 0 && (
           <div className="mt-10 rounded-2xl border border-bronze/10 bg-white/70 p-6">
@@ -679,6 +672,59 @@ export function ProductDetailClient({
             </div>
           </div>
         </section>
+        {embeddableVideoUrl ? (
+          <section className="mt-8 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5 lg:hidden">
+            <p className="text-xs uppercase tracking-[0.2em] text-bronze/70">Ürün Tanıtım Videosu</p>
+            <div className="mt-4 overflow-hidden rounded-xl border border-bronze/15 bg-black/90 shadow-[0_18px_34px_-26px_rgba(28,20,15,0.75)]">
+              {isExternalEmbed ? (
+                <div className="relative aspect-video w-full">
+                  <iframe
+                    src={embeddableVideoUrl}
+                    title={`${product.name} tanıtım videosu`}
+                    className="absolute inset-0 h-full w-full"
+                    loading="lazy"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <div className="relative aspect-video w-full">
+                  <video
+                    className="absolute inset-0 h-full w-full"
+                    src={embeddableVideoUrl}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    poster={galleryImages[0] || undefined}
+                  >
+                    Tarayıcınız video etiketini desteklemiyor.
+                  </video>
+                </div>
+              )}
+            </div>
+          </section>
+        ) : null}
+
+        {productSpecs.length > 0 ? (
+          <section className="mt-8 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5 lg:hidden">
+            <p className="mb-3 text-xs uppercase tracking-[0.2em] text-bronze/70">Ürün Özellikleri</p>
+            <div className="divide-y divide-bronze/10">
+              {productSpecs.map((field) => (
+                <details key={`mobile-${field.key}`} className="group py-2">
+                  <summary className="cursor-pointer list-none py-3 text-sm font-medium text-bronze-dark">
+                    <span className="inline-flex w-full items-center justify-between">
+                      <span>{field.label}</span>
+                      <span className="text-bronze/50 transition-transform group-open:rotate-180">⌄</span>
+                    </span>
+                  </summary>
+                  <p className="pb-3 pr-8 text-sm leading-relaxed text-bronze/75">{field.value}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <section className="mt-8 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

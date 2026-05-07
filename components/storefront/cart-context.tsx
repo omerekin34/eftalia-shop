@@ -16,7 +16,7 @@ export interface CartItem {
 interface CartContextValue {
   items: CartItem[]
   totalItems: number
-  addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void
+  addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number, openDrawer?: boolean) => void
   removeItem: (itemId: string, color?: string) => void
   updateItemQuantity: (itemId: string, color: string | undefined, quantity: number) => void
   clearCart: () => void
@@ -58,7 +58,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
   }, [items])
 
-  const addItem = (item: Omit<CartItem, 'quantity'>, quantity = 1) => {
+  const addItem = (item: Omit<CartItem, 'quantity'>, quantity = 1, openDrawer = true) => {
     setItems((prev) => {
       const existingIndex = prev.findIndex(
         (entry) => entry.id === item.id && entry.color === item.color
@@ -88,7 +88,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           : quantity
       return [...prev, { ...item, quantity: safeQuantity }]
     })
-    setDrawerOpen(true)
+    if (openDrawer) {
+      setDrawerOpen(true)
+    }
   }
 
   const removeItem = (itemId: string, color?: string) => {
