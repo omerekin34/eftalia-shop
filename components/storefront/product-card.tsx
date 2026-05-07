@@ -74,7 +74,7 @@ export function ProductCard({ product }: ProductCardProps) {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image Container */}
-      <Link href={`/product/${product.slug}`} className="relative block aspect-[3/4] overflow-hidden bg-white">
+      <Link href={`/product/${product.slug}`} className="relative block aspect-[3/4.25] overflow-hidden bg-white">
         {/* Primary Image */}
         <div className="absolute inset-0">
           {product.images[0] ? (
@@ -156,7 +156,11 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Color Variants - Bottom of image */}
         {product.colors.length > 1 && (
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 shadow-sm sm:bottom-3 sm:right-3">
+          <div
+            className={`absolute right-2 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 shadow-sm sm:right-3 ${
+              isLowStock ? 'bottom-10 sm:bottom-11' : 'bottom-2 sm:bottom-3'
+            }`}
+          >
             {product.colors.slice(0, 3).map((color) => (
               <button
                 key={color.name}
@@ -193,7 +197,9 @@ export function ProductCard({ product }: ProductCardProps) {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 10 }}
-          className="absolute bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-bronze/90 px-3 py-1.5 text-xs text-white shadow-lg sm:bottom-14"
+          className={`absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-bronze/90 px-3 py-1.5 text-xs text-white shadow-lg ${
+            isLowStock ? 'bottom-[4.75rem] sm:bottom-[5.25rem]' : 'bottom-12 sm:bottom-14'
+          }`}
         >
           {product.name} {selectedColor.name}
         </motion.div>

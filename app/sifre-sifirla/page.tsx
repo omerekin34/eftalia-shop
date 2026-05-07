@@ -8,6 +8,16 @@ import { Eye, EyeOff, KeyRound } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
 
+function isStrongPassword(password: string): boolean {
+  return (
+    password.length >= 10 &&
+    /[a-z]/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  )
+}
+
 function ResetPasswordContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -22,8 +32,8 @@ function ResetPasswordContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (password.length < 5) {
-      setError('Şifre en az 5 karakter olmalıdır.')
+    if (!isStrongPassword(password)) {
+      setError('Şifre en az 10 karakter olmalı; büyük/küçük harf, rakam ve sembol içermelidir.')
       return
     }
     if (password !== passwordConfirm) {
@@ -124,10 +134,10 @@ function ResetPasswordContent() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="new-password"
-                      minLength={5}
+                      minLength={10}
                       required
                       className="w-full px-4 py-3 text-sm text-bronze placeholder:text-bronze/45 focus:outline-none"
-                      placeholder="En az 5 karakter"
+                      placeholder="En az 10 karakter"
                     />
                     <button
                       type="button"
@@ -140,13 +150,18 @@ function ResetPasswordContent() {
                   </div>
                 </div>
                 <div>
+                  <p className="text-xs text-bronze/70">
+                    Güvenlik için: en az 10 karakter, büyük/küçük harf, rakam ve sembol kullanın.
+                  </p>
+                </div>
+                <div>
                   <label className="mb-1.5 block text-sm font-medium text-bronze">Yeni şifre (tekrar)</label>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={passwordConfirm}
                     onChange={(e) => setPasswordConfirm(e.target.value)}
                     autoComplete="new-password"
-                    minLength={5}
+                    minLength={10}
                     required
                     className="w-full rounded-lg border border-bronze/20 bg-white px-4 py-3 text-sm text-bronze placeholder:text-bronze/45 focus:border-bronze/40 focus:outline-none"
                     placeholder="Tekrar yazın"

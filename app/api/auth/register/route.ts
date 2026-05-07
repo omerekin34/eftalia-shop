@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { customerAccessTokenCreate, customerCreate } from '@/lib/shopify'
+import { checkRateLimit, getRequestIp, validateStrongPassword } from '@/lib/auth-security'
 
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
 
@@ -31,6 +32,22 @@ function normalizePhoneForShopify(rawPhone: string) {
 
 export async function POST(request: Request) {
   try {
+    const ip = getRequestIp(request)
+    const limiter = await checkRateLimit({
+      key: `auth:register:${ip}`,
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    })
+    if (!limiter.allowed) {
+      return NextResponse.json(
+        { error: 'Çok fazla üyelik denemesi yapıldı. Lütfen daha sonra tekrar deneyin.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(limiter.retryAfterSeconds) },
+        }
+      )
+    }
+
     const body = (await request.json()) as {
       firstName?: string
       lastName?: string
@@ -50,6 +67,10 @@ export async function POST(request: Request) {
 
     if (!firstName || !lastName || !email || !password) {
       return NextResponse.json({ error: 'Ad, soyad, e-posta ve şifre zorunludur.' }, { status: 400 })
+    }
+    const passwordCheck = validateStrongPassword(password)
+    if (!passwordCheck.valid) {
+      return NextResponse.json({ error: passwordCheck.message }, { status: 400 })
     }
     if (!acceptsPolicies) {
       return NextResponse.json(
@@ -81,10 +102,7 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 30,
     })
     return response
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Üyelik oluşturulamadı.' },
-      { status: 400 }
-    )
+  } catch {
+    return NextResponse.json({ error: 'Üyelik oluşturulamadı.' }, { status: 400 })
   }
 }

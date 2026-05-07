@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { customerResetByUrl } from '@/lib/shopify'
 import { isAllowedShopifyPasswordResetUrl } from '@/lib/is-shopify-password-reset-url'
+import { checkRateLimit, getRequestIp, validateStrongPassword } from '@/lib/auth-security'
 
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
 
@@ -20,6 +21,22 @@ function decodeResetUrlParam(raw: string): string {
 
 export async function POST(request: Request) {
   try {
+    const ip = getRequestIp(request)
+    const limiter = await checkRateLimit({
+      key: `auth:reset-password:${ip}`,
+      limit: 6,
+      windowMs: 15 * 60 * 1000,
+    })
+    if (!limiter.allowed) {
+      return NextResponse.json(
+        { error: 'Çok fazla şifre sıfırlama denemesi yapıldı. Lütfen daha sonra tekrar deneyin.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(limiter.retryAfterSeconds) },
+        }
+      )
+    }
+
     const body = (await request.json()) as { resetUrl?: string; password?: string }
     const resetUrl = decodeResetUrlParam(String(body?.resetUrl || ''))
     const password = String(body?.password || '').trim()
@@ -27,8 +44,9 @@ export async function POST(request: Request) {
     if (!resetUrl || !password) {
       return NextResponse.json({ error: 'Sıfırlama bağlantısı ve yeni şifre zorunludur.' }, { status: 400 })
     }
-    if (password.length < 5) {
-      return NextResponse.json({ error: 'Şifre en az 5 karakter olmalıdır (Shopify kuralı).' }, { status: 400 })
+    const passwordCheck = validateStrongPassword(password)
+    if (!passwordCheck.valid) {
+      return NextResponse.json({ error: passwordCheck.message }, { status: 400 })
     }
 
     if (!isAllowedShopifyPasswordResetUrl(resetUrl)) {
@@ -55,10 +73,7 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 30,
     })
     return response
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Şifre sıfırlanamadı.' },
-      { status: 400 }
-    )
+  } catch {
+    return NextResponse.json({ error: 'Şifre sıfırlanamadı.' }, { status: 400 })
   }
 }

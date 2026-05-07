@@ -63,10 +63,7 @@ export async function POST(request: Request) {
     await customerUpdate(token, { password: generatedPassword })
 
     return NextResponse.json({ ok: true })
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Google hesabı bağlanamadı.' },
-      { status: 400 }
-    )
+  } catch {
+    return NextResponse.json({ error: 'Google hesabı bağlanamadı.' }, { status: 400 })
   }
 }

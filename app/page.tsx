@@ -41,6 +41,7 @@ interface UgcVideo {
 
 export default function Home() {
   const [products, setProducts] = useState<HomeProduct[]>([])
+  const [newProducts, setNewProducts] = useState<HomeProduct[]>([])
   const [ugcVideos, setUgcVideos] = useState<UgcVideo[]>([])
   const [socialPosts, setSocialPosts] = useState<SocialFeedPost[]>([])
   const [socialInstagram, setSocialInstagram] = useState('')
@@ -53,19 +54,13 @@ export default function Home() {
         setIsLoading(true)
         const shopifyProducts = await getProducts(24)
         const inStockProducts = shopifyProducts.filter((item) => item.inStock !== false)
-
-        // Makyaj çantasını vitrinde önceliklendir.
-        const makeup = inStockProducts.find(
-          (item) =>
-            (item.slug || '').includes('makyaj-cantasi') ||
-            (item.name || '').toLocaleLowerCase('tr').includes('makyaj çanta')
-        )
-        const rest = inStockProducts.filter((item) => item.id !== makeup?.id)
-        const showcase = makeup ? [makeup, ...rest].slice(0, 8) : inStockProducts.slice(0, 8)
-
-        setProducts(showcase as HomeProduct[])
+        const bestsellers = inStockProducts.filter((item) => item.isBestseller)
+        const newest = inStockProducts.filter((item) => item.isNew)
+        setProducts(bestsellers as HomeProduct[])
+        setNewProducts(newest as HomeProduct[])
       } catch {
         setProducts([])
+        setNewProducts([])
       } finally {
         setIsLoading(false)
       }
@@ -121,7 +116,7 @@ export default function Home() {
           <div className="mb-6 flex items-end justify-between">
             <div>
               <h2 className="mt-2 font-serif text-2xl text-bronze sm:text-3xl">
-                Eftalia Seçkisi
+                Çok Satanlar
               </h2>
             </div>
           </div>
@@ -140,6 +135,29 @@ export default function Home() {
         </div>
       </section>
       <CategoryGrid />
+      <section className="border-b border-bronze/10 py-10 sm:py-14">
+        <div className="container mx-auto px-4">
+          <div className="mb-6 flex items-end justify-between">
+            <div>
+              <h2 className="mt-2 font-serif text-2xl text-bronze sm:text-3xl">
+                En Yeniler
+              </h2>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <p className="text-sm text-bronze/60">Ürünler yükleniyor...</p>
+          ) : newProducts.length === 0 ? (
+            <p className="text-sm text-bronze/60">Yeni etiketli ürün bulunamadı.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 xl:grid-cols-4">
+              {newProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
       <Marquee />
       <CraftShowcase />
       <Marquee />

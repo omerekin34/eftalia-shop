@@ -416,6 +416,48 @@ export function ProductDetailClient({
           </div>
         )}
 
+        {embeddableVideoUrl ? (
+          <section className="rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-bronze/70">Ürün Tanıtım Videosu</p>
+            <div className="mt-4 overflow-hidden rounded-xl border border-bronze/15 bg-black/90 shadow-[0_18px_34px_-26px_rgba(28,20,15,0.75)]">
+              {isExternalEmbed ? (
+                <div className="relative aspect-video w-full">
+                  <iframe
+                    src={embeddableVideoUrl}
+                    title={`${product.name} tanıtım videosu`}
+                    className="absolute inset-0 h-full w-full"
+                    loading="lazy"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <div className="relative aspect-video w-full">
+                  <video
+                    className="absolute inset-0 h-full w-full"
+                    src={embeddableVideoUrl}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    poster={galleryImages[0] || undefined}
+                  >
+                    Tarayıcınız video etiketini desteklemiyor.
+                  </video>
+                </div>
+              )}
+            </div>
+            <a
+              href={String(product.videoUrl || embeddableVideoUrl)}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-flex text-xs font-medium text-bronze/75 underline underline-offset-4 hover:text-bronze"
+            >
+              Video açılmazsa yeni sekmede aç
+            </a>
+          </section>
+        ) : null}
+
         {productSpecs.length > 0 ? (
           <section className="rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5">
             <p className="mb-3 text-xs uppercase tracking-[0.2em] text-bronze/70">Ürün Özellikleri</p>
@@ -459,7 +501,12 @@ export function ProductDetailClient({
             })}
           </span>
           <span className="text-bronze/35">•</span>
-          <span className="text-bronze/70">{reviewCount} Değerlendirme</span>
+          <a
+            href="#product-reviews"
+            className="text-bronze/70 underline-offset-4 transition-colors hover:text-bronze hover:underline"
+          >
+            {reviewCount} Değerlendirme
+          </a>
           {isRatingPending ? <span className="text-xs text-bronze/60">(puan güncelleniyor)</span> : null}
         </div>
 
@@ -662,31 +709,6 @@ export function ProductDetailClient({
           </div>
         </section>
 
-        {embeddableVideoUrl ? (
-          <section className="mt-8 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-5">
-            <p className="text-xs uppercase tracking-[0.2em] text-bronze/70">Ürün Tanıtım Videosu</p>
-            <div className="mt-4 overflow-hidden rounded-xl border border-bronze/15 bg-black/90 shadow-[0_18px_34px_-26px_rgba(28,20,15,0.75)]">
-              {isExternalEmbed ? (
-                <iframe
-                  src={embeddableVideoUrl}
-                  title={`${product.name} tanıtım videosu`}
-                  className="aspect-video w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                />
-              ) : (
-                <video
-                  className="aspect-video w-full"
-                  src={embeddableVideoUrl}
-                  controls
-                  preload="metadata"
-                >
-                  Tarayıcınız video etiketini desteklemiyor.
-                </video>
-              )}
-            </div>
-          </section>
-        ) : null}
       </div>
 
       {!isDrawerOpen ? (

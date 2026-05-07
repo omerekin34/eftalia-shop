@@ -11,6 +11,7 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Share2,
   Truck,
   RefreshCw,
@@ -22,7 +23,9 @@ import {
 } from 'lucide-react'
 import { Navbar } from '@/components/storefront/navbar'
 import { Footer } from '@/components/storefront/footer'
+import { ProductCard } from '@/components/storefront/product-card'
 import { useCart } from '@/components/storefront/cart-context'
+import { getProducts, type ProductCardModel } from '@/lib/shopify/getProducts'
 
 // Product interface
 interface ProductColor {
@@ -301,6 +304,8 @@ export default function ProductDetailPage() {
 
   const [shopifyProduct, setShopifyProduct] = useState<Product | null>(null)
   const [isLoadingProduct, setIsLoadingProduct] = useState(true)
+  const [similarProducts, setSimilarProducts] = useState<ProductCardModel[]>([])
+  const [isLoadingSimilar, setIsLoadingSimilar] = useState(true)
 
   // Shopify öncelikli, fallback mock/default
   const fallbackProduct =
@@ -351,6 +356,44 @@ export default function ProductDetailPage() {
     setCurrentImageIndex(0)
   }, [product.id, product.colors])
 
+  useEffect(() => {
+    const loadSimilarProducts = async () => {
+      try {
+        setIsLoadingSimilar(true)
+        const allProducts = await getProducts(100)
+        const inStockProducts = allProducts.filter((item) => item.inStock !== false)
+        const currentFromCatalog = inStockProducts.find((item) => item.slug === slug)
+        const candidates = inStockProducts.filter((item) => item.slug !== slug)
+
+        const currentCollections = currentFromCatalog?.collections || []
+        const similarByCollection =
+          currentCollections.length > 0
+            ? candidates.filter((item) =>
+                (item.collections || []).some((collection) =>
+                  currentCollections.some((currentCollection) => currentCollection.handle === collection.handle)
+                )
+              )
+            : []
+
+        const similarBase = similarByCollection.length
+          ? similarByCollection
+          : candidates.filter(
+              (item) =>
+                item.subcategory.toLocaleLowerCase('tr') === product.subcategory.toLocaleLowerCase('tr') ||
+                item.category === product.category
+            )
+
+        setSimilarProducts(similarBase.slice(0, 4))
+      } catch {
+        setSimilarProducts([])
+      } finally {
+        setIsLoadingSimilar(false)
+      }
+    }
+
+    void loadSimilarProducts()
+  }, [slug, product.category, product.subcategory])
+
   const productReviews: ProductReview[] = [
     {
       id: '1',
@@ -382,7 +425,7 @@ export default function ProductDetailPage() {
     },
   ]
 
-  const visibleReviews = showAllReviews ? productReviews : productReviews.slice(0, 2)
+  const visibleReviews = showAllReviews ? productReviews : productReviews.slice(0, 1)
 
   const quickInfoItems: QuickInfoItem[] = [
     {
@@ -834,12 +877,20 @@ export default function ProductDetailPage() {
                     ))}
                   </div>
 
-                  {productReviews.length > 2 && (
+                  {productReviews.length > 1 && (
                     <button
                       onClick={() => setShowAllReviews((prev) => !prev)}
-                      className="mt-4 text-sm font-medium text-bronze underline-offset-4 transition-colors hover:text-bronze-dark hover:underline"
+                      className="mt-4 flex items-center gap-2 text-sm font-medium text-bronze transition-colors hover:text-bronze-dark"
                     >
-                      {showAllReviews ? 'Daha az yorum göster' : 'Tüm yorumları göster'}
+                      <span
+                        className={`flex h-7 w-7 items-center justify-center rounded-full border border-bronze/25 transition-transform ${
+                          showAllReviews ? 'rotate-180' : ''
+                        }`}
+                        aria-hidden
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </span>
+                      <span>{showAllReviews ? 'Yorumları daralt' : 'Tüm yorumları göster'}</span>
                     </button>
                   )}
                 </div>
@@ -886,6 +937,24 @@ export default function ProductDetailPage() {
             </div>
           </div>
         </div>
+
+        <section className="mx-auto mt-16 max-w-7xl border-t border-bronze/10 px-4 pt-12 sm:px-6 lg:px-8">
+          <div className="mb-6 flex items-end justify-between">
+            <h2 className="font-serif text-2xl text-bronze sm:text-3xl">Benzer Ürünler</h2>
+          </div>
+
+          {isLoadingSimilar ? (
+            <p className="text-sm text-bronze/60">Benzer ürünler yükleniyor...</p>
+          ) : similarProducts.length === 0 ? (
+            <p className="text-sm text-bronze/60">Bu ürün için benzer ürün bulunamadı.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 xl:grid-cols-4">
+              {similarProducts.map((item) => (
+                <ProductCard key={item.id} product={item} />
+              ))}
+            </div>
+          )}
+        </section>
       </main>
 
       <Footer />

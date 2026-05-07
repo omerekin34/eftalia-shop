@@ -163,7 +163,10 @@ export default async function ProductByHandlePage({ params, searchParams }: Page
             }))}
           />
 
-          <section className="mt-10 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-6 sm:p-7">
+          <section
+            id="product-reviews"
+            className="mt-10 rounded-2xl border border-bronze/10 bg-gradient-to-b from-[#fffdf9] to-[#fffaf0] p-6 sm:p-7"
+          >
             <p className="text-xs uppercase tracking-[0.2em] text-bronze/70">Müşteri Değerlendirmeleri</p>
 
             <div className="mt-4 rounded-xl border border-bronze/15 bg-white/75 p-5">
@@ -198,36 +201,68 @@ export default async function ProductByHandlePage({ params, searchParams }: Page
 
             {reviews.length > 0 ? (
               <div className="mt-5 space-y-3">
-                {reviews.map((review: any) => {
-                  const displayName = String(review.reviewerName || review.reviewer || 'Müşteri').trim()
-                  const displayBody =
-                    typeof review.body === 'string' && review.body.trim() ? review.body.trim() : 'Yorum metni bulunamadı.'
+                {(() => {
+                  const renderReviewCard = (review: any) => {
+                    const displayName = String(review.reviewerName || review.reviewer || 'Müşteri').trim()
+                    const displayBody =
+                      typeof review.body === 'string' && review.body.trim()
+                        ? review.body.trim()
+                        : 'Yorum metni bulunamadı.'
+                    return (
+                      <article
+                        key={review.id || `${displayName}-${review.createdAt}`}
+                        className="rounded-xl border border-bronze/15 bg-gradient-to-b from-[#fffdf9] to-[#faf6f0] p-4 shadow-sm sm:p-5"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h3 className="text-sm font-semibold text-bronze-dark">{review.title || 'Ürün Yorumu'}</h3>
+                          <span className="text-xs text-bronze/55">{formatReviewDate(review.createdAt)}</span>
+                        </div>
+                        <div className="mt-2 flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <span
+                              key={star}
+                              className={`text-sm ${Number(review.rating || 0) >= star ? 'text-[#D4AF37]' : 'text-bronze/25'}`}
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                        <p className="mt-3 font-serif text-base font-semibold tracking-tight text-bronze-dark">
+                          {displayName}
+                        </p>
+                        <p className="mt-3 whitespace-pre-wrap break-words border-t border-bronze/10 pt-3 text-sm leading-relaxed text-bronze/80">
+                          {displayBody}
+                        </p>
+                      </article>
+                    )
+                  }
+
+                  const firstReview = reviews[0]
+                  const otherReviews = reviews.slice(1)
+
                   return (
-                  <article
-                    key={review.id || `${displayName}-${review.createdAt}`}
-                    className="rounded-xl border border-bronze/15 bg-gradient-to-b from-[#fffdf9] to-[#faf6f0] p-4 shadow-sm sm:p-5"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="text-sm font-semibold text-bronze-dark">{review.title || 'Ürün Yorumu'}</h3>
-                      <span className="text-xs text-bronze/55">{formatReviewDate(review.createdAt)}</span>
-                    </div>
-                    <div className="mt-2 flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <span
-                          key={star}
-                          className={`text-sm ${Number(review.rating || 0) >= star ? 'text-[#D4AF37]' : 'text-bronze/25'}`}
-                        >
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                    <p className="mt-3 font-serif text-base font-semibold tracking-tight text-bronze-dark">{displayName}</p>
-                    <p className="mt-3 whitespace-pre-wrap break-words border-t border-bronze/10 pt-3 text-sm leading-relaxed text-bronze/80">
-                      {displayBody}
-                    </p>
-                  </article>
+                    <>
+                      {firstReview ? renderReviewCard(firstReview) : null}
+
+                      {otherReviews.length > 0 ? (
+                        <details className="group rounded-xl border border-bronze/15 bg-white/70">
+                          <summary className="flex cursor-pointer list-none items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-bronze transition-colors hover:text-bronze-dark">
+                            <span
+                              className="flex h-7 w-7 items-center justify-center rounded-full border border-bronze/25 text-xs transition-transform group-open:rotate-180"
+                              aria-hidden
+                            >
+                              v
+                            </span>
+                            <span>Tüm yorumları göster</span>
+                          </summary>
+                          <div className="space-y-3 border-t border-bronze/10 p-3 sm:p-4">
+                            {otherReviews.map((review: any) => renderReviewCard(review))}
+                          </div>
+                        </details>
+                      ) : null}
+                    </>
                   )
-                })}
+                })()}
               </div>
             ) : judgemeWidgetHtml ? (
               <div className="mt-5 rounded-xl border border-bronze/10 bg-white/80 p-4 sm:p-5">

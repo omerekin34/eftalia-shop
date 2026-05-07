@@ -48,13 +48,38 @@ const footerLinks = {
   ],
 }
 
+const NEWSLETTER_STORAGE_KEY = 'eftalia_newsletter_subscription'
+
 export function Footer() {
   const [email, setEmail] = useState('')
+  const [subscribedEmail, setSubscribedEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [subscribeMessage, setSubscribeMessage] = useState('')
   const [shopLinks, setShopLinks] = useState<Array<{ label: string; href: string }>>([
     { label: 'Tüm Ürünler', href: '/tum-urunler' },
   ])
+  const formspreeEndpoint = String(
+    process.env.NEXT_PUBLIC_FORMSPREE_NEWSLETTER_ENDPOINT ||
+      process.env.NEXT_PUBLIC_FORMSPREE_ENDPOINT ||
+      ''
+  ).trim()
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const raw = window.localStorage.getItem(NEWSLETTER_STORAGE_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw) as { subscribed?: boolean; email?: string }
+      if (parsed?.subscribed && parsed?.email) {
+        setIsSubscribed(true)
+        setSubscribedEmail(String(parsed.email))
+        setSubscribeMessage('Kulübe hoş geldiniz! E-posta listesine eklendiniz.')
+      }
+    } catch {
+      // Ignore invalid stored data
+    }
+  }, [])
 
   useEffect(() => {
     const loadCollections = async () => {
@@ -101,13 +126,52 @@ export function Footer() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email) return
-    
+    setSubscribeMessage('')
+
+    if (!formspreeEndpoint) {
+      setSubscribeMessage('Abonelik formu henüz yapılandırılmadı.')
+      return
+    }
+
     setIsSubmitting(true)
-    // Simulate API call for newsletter signup
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsSubscribed(true)
-    setIsSubmitting(false)
-    setEmail('')
+    try {
+      const response = await fetch(formspreeEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          source: 'footer-newsletter',
+        }),
+      })
+
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string
+        errors?: Array<{ message?: string }>
+      }
+
+      if (!response.ok) {
+        const message = data.error || data.errors?.[0]?.message || 'Abonelik işlemi tamamlanamadı.'
+        throw new Error(message)
+      }
+
+      setIsSubscribed(true)
+      setSubscribedEmail(email)
+      setSubscribeMessage('Kulübe hoş geldiniz! E-posta listesine eklendiniz.')
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(
+          NEWSLETTER_STORAGE_KEY,
+          JSON.stringify({ subscribed: true, email })
+        )
+      }
+      setEmail('')
+    } catch (error) {
+      setSubscribeMessage(error instanceof Error ? error.message : 'Abonelik işlemi tamamlanamadı.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -141,7 +205,7 @@ export function Footer() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="E-posta adresiniz"
                   className="w-full border-b-2 border-bronze/30 bg-transparent py-3 pr-12 text-bronze placeholder:text-bronze-light/60 focus:border-gold focus:outline-none"
-                  disabled={isSubscribed}
+                  disabled={isSubscribed || isSubmitting}
                 />
                 <button
                   type="submit"
@@ -156,6 +220,30 @@ export function Footer() {
                   )}
                 </button>
               </div>
+              {subscribeMessage ? (
+                <p className="mt-3 text-xs text-bronze/70">{subscribeMessage}</p>
+              ) : null}
+              {isSubscribed ? (
+                <div className="mt-2 flex items-center justify-between gap-3 text-xs text-bronze/65">
+                  <span>
+                    Kayıtlı e-posta: <strong className="text-bronze/85">{subscribedEmail}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSubscribed(false)
+                      setSubscribeMessage('')
+                      setEmail(subscribedEmail)
+                      if (typeof window !== 'undefined') {
+                        window.localStorage.removeItem(NEWSLETTER_STORAGE_KEY)
+                      }
+                    }}
+                    className="underline underline-offset-4 transition-colors hover:text-bronze"
+                  >
+                    Kulüp e-postasını değiştir
+                  </button>
+                </div>
+              ) : null}
               <p className="mt-3 text-xs text-bronze/55">
                 Kayıt olarak bilgilendirme e-postalarını almayı kabul etmiş olursunuz.
               </p>

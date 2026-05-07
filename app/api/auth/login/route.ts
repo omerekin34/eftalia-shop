@@ -1,10 +1,27 @@
 import { NextResponse } from 'next/server'
 import { customerAccessTokenCreate } from '@/lib/shopify'
+import { checkRateLimit, getRequestIp } from '@/lib/auth-security'
 
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
 
 export async function POST(request: Request) {
   try {
+    const ip = getRequestIp(request)
+    const limiter = await checkRateLimit({
+      key: `auth:login:${ip}`,
+      limit: 8,
+      windowMs: 10 * 60 * 1000,
+    })
+    if (!limiter.allowed) {
+      return NextResponse.json(
+        { error: 'Çok fazla giriş denemesi yapıldı. Lütfen daha sonra tekrar deneyin.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(limiter.retryAfterSeconds) },
+        }
+      )
+    }
+
     const body = (await request.json()) as { email?: string; password?: string }
     const email = String(body?.email || '').trim()
     const password = String(body?.password || '').trim()
@@ -27,10 +44,7 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 30,
     })
     return response
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Giriş başarısız oldu.' },
-      { status: 400 }
-    )
+  } catch {
+    return NextResponse.json({ error: 'Giriş sırasında bir sorun oluştu.' }, { status: 400 })
   }
 }

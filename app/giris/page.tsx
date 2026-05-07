@@ -10,6 +10,20 @@ import { Footer } from '@/components/storefront/footer'
 
 type AuthMode = 'login' | 'register'
 
+function getPasswordStrengthLabel(password: string): string {
+  if (!password) return 'Henüz girilmedi'
+  let score = 0
+  if (password.length >= 10) score += 1
+  if (/[a-z]/.test(password)) score += 1
+  if (/[A-Z]/.test(password)) score += 1
+  if (/\d/.test(password)) score += 1
+  if (/[^A-Za-z0-9]/.test(password)) score += 1
+
+  if (score <= 2) return 'Zayıf'
+  if (score <= 4) return 'Orta'
+  return 'Güçlü'
+}
+
 declare global {
   interface Window {
     google?: {
@@ -53,6 +67,7 @@ function LoginPageContent() {
     password: '',
     phone: '',
   })
+  const passwordStrength = getPasswordStrengthLabel(form.password)
 
   const handleInputChange = (field: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -346,7 +361,7 @@ function LoginPageContent() {
                       placeholder="••••••••"
                       className="w-full px-4 py-3 text-sm text-bronze placeholder:text-bronze/45 focus:outline-none"
                       required
-                      minLength={6}
+                      minLength={mode === 'register' ? 10 : 6}
                     />
                     <button
                       type="button"
@@ -357,6 +372,15 @@ function LoginPageContent() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                  {mode === 'register' ? (
+                    <div className="mt-2 space-y-1 text-xs text-bronze/70">
+                      <p>
+                        Güvenlik için: en az 10 karakter, büyük/küçük harf, rakam ve sembol
+                        kullanın.
+                      </p>
+                      <p className="font-medium text-bronze">Şifre gücü: {passwordStrength}</p>
+                    </div>
+                  ) : null}
                 </div>
 
                 {mode === 'login' && forgotPasswordOpen ? (
