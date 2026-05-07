@@ -13,7 +13,6 @@ import {
 } from '@/lib/policy-claims'
 
 const supportPhone = '+90 (552) 713 82 13'
-const formspreeEndpoint = process.env.NEXT_PUBLIC_FORMSPREE_ENDPOINT || ''
 
 type PolicyResponse = {
   title?: string
@@ -133,20 +132,16 @@ export default function ContactPage() {
   const handleContactSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setContactFeedback('')
-    if (!formspreeEndpoint) {
-      setContactFeedback('İletişim formu henüz yapılandırılmadı. Lütfen kısa süre sonra tekrar deneyin.')
-      return
-    }
 
     setIsSubmittingContact(true)
     try {
-      const response = await fetch(formspreeEndpoint, {
+      const response = await fetch('/api/forms/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
         },
         body: JSON.stringify({
+          kind: 'contact',
           name: contactForm.name,
           email: contactForm.email,
           subject: contactForm.subject,

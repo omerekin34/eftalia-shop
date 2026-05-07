@@ -59,12 +59,6 @@ export function Footer() {
   const [shopLinks, setShopLinks] = useState<Array<{ label: string; href: string }>>([
     { label: 'Tüm Ürünler', href: '/tum-urunler' },
   ])
-  const formspreeEndpoint = String(
-    process.env.NEXT_PUBLIC_FORMSPREE_NEWSLETTER_ENDPOINT ||
-      process.env.NEXT_PUBLIC_FORMSPREE_ENDPOINT ||
-      ''
-  ).trim()
-
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
@@ -128,20 +122,15 @@ export function Footer() {
     if (!email) return
     setSubscribeMessage('')
 
-    if (!formspreeEndpoint) {
-      setSubscribeMessage('Abonelik formu henüz yapılandırılmadı.')
-      return
-    }
-
     setIsSubmitting(true)
     try {
-      const response = await fetch(formspreeEndpoint, {
+      const response = await fetch('/api/forms/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
         },
         body: JSON.stringify({
+          kind: 'newsletter',
           email,
           source: 'footer-newsletter',
         }),
