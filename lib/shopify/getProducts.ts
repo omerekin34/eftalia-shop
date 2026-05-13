@@ -16,6 +16,12 @@ export interface ProductCardModel {
   inStock: boolean
   stockQuantity?: number
   colorStockByName?: Record<string, number>
+  /** Shopify variant GID keyed by color option value (Storefront list API). */
+  variantIdByColor?: Record<string, string>
+  variantPriceByColor?: Record<string, number>
+  variantMaxQtyByColor?: Record<string, number>
+  /** İlk varyant (tek seçenekli ürünler için yedek). */
+  variantId?: string
 }
 
 type ShopifyProductNode = {
@@ -30,6 +36,7 @@ type ShopifyProductNode = {
   variants?: {
     edges?: Array<{
       node?: {
+        id?: string
         availableForSale?: boolean
         quantityAvailable?: number | null
         price?: { amount?: string }
@@ -58,6 +65,10 @@ type NormalizedApiProduct = {
   inStock?: boolean
   stockQuantity?: number
   colorStockByName?: Record<string, number>
+  variantIdByColor?: Record<string, string>
+  variantPriceByColor?: Record<string, number>
+  variantMaxQtyByColor?: Record<string, number>
+  variantId?: string
 }
 
 const colorHexMap: Record<string, string> = {
@@ -160,6 +171,24 @@ function toProductCardModel(node: ShopifyProductNode): ProductCardModel {
     return acc
   }, {})
 
+  const variantIdByColor: Record<string, string> = {}
+  const variantPriceByColor: Record<string, number> = {}
+  const variantMaxQtyByColor: Record<string, number> = {}
+  for (const variant of variants) {
+    if (!variant?.id) continue
+    const colorOption = (variant?.selectedOptions || []).find((option) =>
+      ['color', 'renk'].includes((option.name || '').toLocaleLowerCase('tr'))
+    )
+    const colorName = String(colorOption?.value || 'Standart').trim() || 'Standart'
+    variantIdByColor[colorName] = variant.id
+    const p = Number(variant?.price?.amount || 0)
+    if (Number.isFinite(p) && p > 0) variantPriceByColor[colorName] = p
+    if (variant?.availableForSale) {
+      const qty = Number(variant?.quantityAvailable ?? 0)
+      if (Number.isFinite(qty) && qty > 0) variantMaxQtyByColor[colorName] = qty
+    }
+  }
+
   const galleryImages = (node.images?.edges || [])
     .map((edge) => edge.node?.url)
     .filter((url): url is string => Boolean(url))
@@ -192,6 +221,12 @@ function toProductCardModel(node: ShopifyProductNode): ProductCardModel {
     inStock,
     stockQuantity,
     colorStockByName,
+    variantIdByColor,
+    variantPriceByColor:
+      Object.keys(variantPriceByColor).length > 0 ? variantPriceByColor : undefined,
+    variantMaxQtyByColor:
+      Object.keys(variantMaxQtyByColor).length > 0 ? variantMaxQtyByColor : undefined,
+    variantId: variants[0]?.id,
   }
 }
 
@@ -228,6 +263,10 @@ function normalizeApiProduct(product: NormalizedApiProduct): ProductCardModel {
     inStock: product.inStock !== false,
     stockQuantity: Number(product.stockQuantity || 0),
     colorStockByName: product.colorStockByName || {},
+    variantIdByColor: product.variantIdByColor || {},
+    variantPriceByColor: product.variantPriceByColor,
+    variantMaxQtyByColor: product.variantMaxQtyByColor,
+    variantId: product.variantId,
   }
 }
 
