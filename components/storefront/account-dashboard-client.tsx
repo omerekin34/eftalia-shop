@@ -12,7 +12,9 @@ import {
   AccountServiceRequestsPanel,
   type ServiceTicket,
 } from '@/components/storefront/account-service-requests-panel'
+import { AccountMembershipForm, type MembershipProfileExtension } from '@/components/storefront/account-membership-form'
 import { useFavorites } from '@/components/storefront/favorites-context'
+import { normalizePhoneForShopify } from '@/lib/phone-shopify'
 
 type CustomerAddress = {
   id: string
@@ -33,6 +35,8 @@ type CustomerDetails = {
   lastName?: string
   email?: string
   phone?: string
+  acceptsMarketing?: boolean
+  membershipProfile?: MembershipProfileExtension | null
   addresses?: CustomerAddress[]
   spinWheelRewardRaw?: string
   returnTickets?: ServiceTicket[]
@@ -108,9 +112,6 @@ export function AccountDashboardClient({
   const cancelTickets = customer.cancelTickets ?? []
 
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard')
-  const [isSavingProfile, setIsSavingProfile] = useState(false)
-  const [profileMessage, setProfileMessage] = useState('')
-  const [profileError, setProfileError] = useState('')
   const [addresses, setAddresses] = useState<CustomerAddress[]>(customer.addresses || [])
   const [addressMessage, setAddressMessage] = useState('')
   const [addressError, setAddressError] = useState('')
@@ -121,8 +122,16 @@ export function AccountDashboardClient({
     lastName: customer.lastName || '',
     email: customer.email || '',
     phone: customer.phone || '',
-    password: '',
   })
+
+  useEffect(() => {
+    setProfileForm({
+      firstName: customer.firstName || '',
+      lastName: customer.lastName || '',
+      email: customer.email || '',
+      phone: customer.phone || '',
+    })
+  }, [customer.firstName, customer.lastName, customer.email, customer.phone])
   const [spinState, setSpinState] = useState<{
     rewards: SpinRewardEntry[]
     totalSpend: number
@@ -313,31 +322,20 @@ export function AccountDashboardClient({
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [activeTab])
 
-  const handleProfileSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setIsSavingProfile(true)
-    setProfileError('')
-    setProfileMessage('')
-    try {
-      const response = await fetch('/api/account/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName: profileForm.firstName,
-          lastName: profileForm.lastName,
-          phone: profileForm.phone,
-          password: profileForm.password || undefined,
-        }),
-      })
-      const data = (await response.json()) as { error?: string }
-      if (!response.ok) throw new Error(data?.error || 'Bilgiler güncellenemedi.')
-      setProfileMessage('Üyelik bilgileriniz güncellendi.')
-      setProfileForm((prev) => ({ ...prev, password: '' }))
-    } catch (error) {
-      setProfileError(error instanceof Error ? error.message : 'Bilgiler güncellenemedi.')
-    } finally {
-      setIsSavingProfile(false)
-    }
+  const handleProfileNamesUpdated = (patch: {
+    firstName: string
+    lastName: string
+    phone: string
+    email: string
+  }) => {
+    const normalized = normalizePhoneForShopify(patch.phone)
+    setProfileForm((prev) => ({
+      ...prev,
+      firstName: patch.firstName,
+      lastName: patch.lastName,
+      phone: normalized || prev.phone,
+      email: patch.email || prev.email,
+    }))
   }
 
   const resetAddressForm = () => {
@@ -577,58 +575,7 @@ export function AccountDashboardClient({
           )}
 
           {activeTab === 'profile' && (
-            <div>
-              <h2 className="font-serif text-2xl text-[#4d3523]">Üyelik Bilgilerim</h2>
-              <form onSubmit={handleProfileSubmit} className="mt-5 grid gap-4 sm:grid-cols-2">
-                <input
-                  value={profileForm.firstName}
-                  onChange={(e) => setProfileForm((prev) => ({ ...prev, firstName: e.target.value }))}
-                  className="rounded-lg border border-[#9b7a57]/30 bg-white px-4 py-3 text-sm text-[#4d3523] outline-none focus:border-[#6d4f35]"
-                  placeholder="Ad"
-                />
-                <input
-                  value={profileForm.lastName}
-                  onChange={(e) => setProfileForm((prev) => ({ ...prev, lastName: e.target.value }))}
-                  className="rounded-lg border border-[#9b7a57]/30 bg-white px-4 py-3 text-sm text-[#4d3523] outline-none focus:border-[#6d4f35]"
-                  placeholder="Soyad"
-                />
-                <input
-                  value={profileForm.email}
-                  readOnly
-                  className="rounded-lg border border-[#9b7a57]/20 bg-[#f5ede2] px-4 py-3 text-sm text-[#6d4f35] sm:col-span-2"
-                />
-                <input
-                  value={profileForm.phone}
-                  onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
-                  className="rounded-lg border border-[#9b7a57]/30 bg-white px-4 py-3 text-sm text-[#4d3523] outline-none focus:border-[#6d4f35]"
-                  placeholder="Telefon"
-                />
-                <input
-                  type="password"
-                  value={profileForm.password}
-                  onChange={(e) => setProfileForm((prev) => ({ ...prev, password: e.target.value }))}
-                  className="rounded-lg border border-[#9b7a57]/30 bg-white px-4 py-3 text-sm text-[#4d3523] outline-none focus:border-[#6d4f35]"
-                  placeholder="Yeni Şifre (opsiyonel)"
-                />
-                {profileError ? (
-                  <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 sm:col-span-2">
-                    {profileError}
-                  </p>
-                ) : null}
-                {profileMessage ? (
-                  <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 sm:col-span-2">
-                    {profileMessage}
-                  </p>
-                ) : null}
-                <button
-                  type="submit"
-                  disabled={isSavingProfile}
-                  className="w-fit rounded-lg bg-[#5B1F2A] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#4a1822] disabled:opacity-70 sm:col-span-2"
-                >
-                  {isSavingProfile ? 'Kaydediliyor...' : 'Bilgileri Güncelle'}
-                </button>
-              </form>
-            </div>
+            <AccountMembershipForm customer={customer} onProfileUpdated={handleProfileNamesUpdated} />
           )}
 
           {activeTab === 'addresses' && (

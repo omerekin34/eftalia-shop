@@ -127,6 +127,18 @@ const METAFIELDS_SET_MUTATION = /* GraphQL */ `
   }
 `
 
+const CUSTOMER_DELETE_MUTATION = /* GraphQL */ `
+  mutation CustomerDelete($input: CustomerDeleteInput!) {
+    customerDelete(input: $input) {
+      deletedCustomerId
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`
+
 const CUSTOMER_SPIN_REWARD_QUERY = /* GraphQL */ `
   query CustomerSpinReward($id: ID!) {
     customer(id: $id) {
@@ -466,7 +478,7 @@ export async function createCustomerScopedWheelDiscount(customerGid: string, per
 /** Storefront `customerUpdate` cannot write customer metafields; use Admin metafieldsSet (same as spin wheel). */
 export async function setCustomerJsonMetafieldAdmin(
   customerGid: string,
-  key: 'return_requests' | 'cancel_requests',
+  key: 'return_requests' | 'cancel_requests' | 'membership_profile_v1',
   value: unknown
 ) {
   const ownerId = String(customerGid || '').trim()
@@ -814,6 +826,36 @@ export async function getOrdersDisplayFulfillmentStatusByOrderNumbers(orderNumbe
   }
 
   return statusMap
+}
+
+export async function deleteCustomerByGidAdmin(customerGid: string) {
+  const id = String(customerGid || '').trim()
+  if (!id) return { ok: false as const, error: 'Müşteri kimliği yok.' }
+  if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_ACCESS_TOKEN) {
+    return {
+      ok: false as const,
+      error:
+        'Hesabı Shopify üzerinden silmek için SHOPIFY_ADMIN_ACCESS_TOKEN gerekir; özel uygulamada `write_customers` ve `read_customers` izinlerini açın.',
+    }
+  }
+
+  const data = await adminGraphqlFetch<{
+    customerDelete?: {
+      deletedCustomerId?: string | null
+      userErrors?: Array<{ message?: string | null } | null>
+    } | null
+  }>(CUSTOMER_DELETE_MUTATION, { input: { id } })
+
+  const errors = (data?.customerDelete?.userErrors || [])
+    .map((e) => String(e?.message || '').trim())
+    .filter(Boolean)
+  if (errors.length) {
+    return { ok: false as const, error: errors.join(' | ') }
+  }
+  if (!data?.customerDelete?.deletedCustomerId) {
+    return { ok: false as const, error: 'Müşteri silinemedi (Shopify yanıtı eksik).' }
+  }
+  return { ok: true as const }
 }
 
 export type CampaignBannerConfig = {

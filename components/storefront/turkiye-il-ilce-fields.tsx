@@ -25,6 +25,8 @@ type TurkiyeIlIlceFieldsProps = {
   onIlChange: (il: string) => void
   onIlceChange: (ilce: string) => void
   onMahalleChange: (mahalle: string) => void
+  /** false: sadece il / ilçe (üyelik formu gibi). Varsayılan true. */
+  showMahalle?: boolean
 }
 
 function SearchableLocationPicker({
@@ -112,6 +114,7 @@ export function TurkiyeIlIlceFields({
   onIlChange,
   onIlceChange,
   onMahalleChange,
+  showMahalle = true,
 }: TurkiyeIlIlceFieldsProps) {
   const iller = useMemo(() => getTumIlIsimleri(), [])
   const ilceler = useMemo(() => {
@@ -163,6 +166,7 @@ export function TurkiyeIlIlceFields({
           }}
         />
       </div>
+      {showMahalle ? (
       <div className="min-w-0 sm:col-span-2">
         <SearchableLocationPicker
           type="mahalle"
@@ -177,6 +181,7 @@ export function TurkiyeIlIlceFields({
           onSelect={onMahalleChange}
         />
       </div>
+      ) : null}
     </>
   )
 }
