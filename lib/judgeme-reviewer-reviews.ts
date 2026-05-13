@@ -84,6 +84,87 @@ export async function fetchJudgeMeReviewsByReviewerEmail(
   }
 }
 
+/**
+ * Hesap silindiğinde reviewer e-postasına bağlı tüm Judge.me yorumlarını temizler.
+ * Önce `DELETE` denenir; başarısızsa `curated:spam` ile gizler.
+ * Hata durumunda silme akışını bloklamaz; sayım/uyarı döner.
+ */
+export async function purgeJudgeMeReviewsByReviewerEmail(
+  customerEmail: string
+): Promise<{ removed: number; failed: number }> {
+  const email = String(customerEmail || "").trim().toLowerCase();
+  if (!email) return { removed: 0, failed: 0 };
+
+  const apiToken = (process.env.JUDGEME_PRIVATE_TOKEN || process.env.JUDGEME_API_TOKEN || "").trim();
+  const shopDomain = (process.env.JUDGEME_SHOP_DOMAIN || "").trim();
+  if (!apiToken || !shopDomain) return { removed: 0, failed: 0 };
+
+  const reviews = await fetchJudgeMeReviewsByReviewerEmail(email);
+  if (!reviews.length) return { removed: 0, failed: 0 };
+
+  const bases = ["https://judge.me/api/v1", "https://api.judge.me/api/v1"];
+  const headers: Record<string, string> = {
+    "X-Api-Token": apiToken,
+    "Content-Type": "application/json",
+  };
+
+  let removed = 0;
+  let failed = 0;
+
+  for (const review of reviews) {
+    const id = String(review.id || "").trim();
+    if (!id) continue;
+
+    let success = false;
+
+    for (const base of bases) {
+      const url = new URL(`${base}/reviews/${id}`);
+      url.searchParams.set("shop_domain", shopDomain);
+      url.searchParams.set("api_token", apiToken);
+      try {
+        const delRes = await fetch(url.toString(), {
+          method: "DELETE",
+          headers,
+          cache: "no-store",
+        });
+        if (delRes.ok || delRes.status === 204) {
+          success = true;
+          break;
+        }
+      } catch {
+        // sonraki base'i dene
+      }
+    }
+
+    if (!success) {
+      for (const base of bases) {
+        const url = new URL(`${base}/reviews/${id}`);
+        url.searchParams.set("shop_domain", shopDomain);
+        url.searchParams.set("api_token", apiToken);
+        try {
+          const putRes = await fetch(url.toString(), {
+            method: "PUT",
+            headers,
+            cache: "no-store",
+            body: JSON.stringify({ shop_domain: shopDomain, curated: "spam" }),
+          });
+          if (putRes.ok) {
+            success = true;
+            break;
+          }
+        } catch {
+          // sonraki base'i dene
+        }
+      }
+    }
+
+    if (success) removed += 1;
+    else failed += 1;
+  }
+
+  return { removed, failed };
+}
+
 /** Judge.me’deki görsel yoksa veya zayıfsa Shopify ürün handle’ına göre kapak görseli doldurur. */
 export async function attachShopifyProductImagesToReviews(
   reviews: JudgeMeReviewerReview[]

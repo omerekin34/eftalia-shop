@@ -29,7 +29,7 @@ export function SpinWheelLauncher() {
 
   return (
     <>
-      <div className="fixed bottom-24 right-5 z-[95]">
+      <div className="fixed right-3 z-[95] bottom-[calc(env(safe-area-inset-bottom,0px)+10rem)] sm:right-5 sm:bottom-24">
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}

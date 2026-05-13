@@ -10,6 +10,7 @@ import {
   deleteCustomerByGidAdmin,
   setCustomerJsonMetafieldAdmin,
 } from '@/lib/shopify-admin'
+import { purgeJudgeMeReviewsByReviewerEmail } from '@/lib/judgeme-reviewer-reviews'
 import { checkRateLimit, getRequestIp } from '@/lib/auth-security'
 
 const AUTH_COOKIE_NAME = 'eftalia_customer_access_token'
@@ -172,6 +173,13 @@ export async function DELETE(request: Request) {
         { error: 'Hesabı silmek için e-posta adresinizi aynen yazmanız gerekir.' },
         { status: 400 }
       )
+    }
+
+    // Judge.me'deki yorumları temizle (e-posta bazlı bağlanıyor; hesap silinince kalmasın).
+    try {
+      await purgeJudgeMeReviewsByReviewerEmail(String(details.email || ''))
+    } catch {
+      // Yorum silinemese bile hesap silme akışını durdurma.
     }
 
     const del = await deleteCustomerByGidAdmin(details.id)

@@ -12,9 +12,11 @@ export function SupportFab() {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <div className="fixed bottom-5 right-5 z-[90]">
+    <div
+      className="fixed right-3 z-[90] bottom-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] sm:right-5 sm:bottom-5"
+    >
       {isOpen ? (
-        <div className="mb-3 w-[280px] rounded-2xl border border-bronze/15 bg-white p-4 shadow-xl">
+        <div className="mb-3 w-[260px] rounded-2xl border border-bronze/15 bg-white p-4 shadow-xl sm:w-[280px]">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-sm font-semibold text-bronze-dark">Canlı Destek</p>
             <button

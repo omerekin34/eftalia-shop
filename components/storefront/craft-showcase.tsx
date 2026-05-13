@@ -68,7 +68,7 @@ export function CraftShowcase() {
           transition={{ duration: 0.8 }}
           className="mb-16 lg:mb-20"
         >
-          <div className="flex flex-col items-start gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col items-start gap-6">
             <div>
               <span className="inline-block text-xs tracking-[0.4em] text-bronze-light">
                 DETAYIN SANATI
@@ -77,10 +77,6 @@ export function CraftShowcase() {
                 Zanaatımız, Hikayeniz
               </h2>
             </div>
-            <p className="max-w-md text-base leading-relaxed text-bronze-light lg:text-right">
-              Cüzdan ve kartlıklarda deri seçimi; çantalarda gabardin kumaşın dayanıklılığı ve drapesi ustalıkla bir araya gelir.
-              Her parça adanmışlığın hikayesini taşır—küresel standartlar, usta eller.
-            </p>
           </div>
         </motion.div>
 
