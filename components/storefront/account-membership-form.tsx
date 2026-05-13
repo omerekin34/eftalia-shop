@@ -179,6 +179,14 @@ export function AccountMembershipForm({
       })
       const data = (await response.json()) as { error?: string }
       if (!response.ok) throw new Error(data?.error || 'Hesap silinemedi.')
+      try {
+        window.localStorage.removeItem('eftalia_newsletter_subscription')
+        window.localStorage.removeItem('eftelia_cart_items')
+        window.dispatchEvent(new Event('auth:changed'))
+        window.dispatchEvent(new Event('eftalia:newsletter-reset'))
+      } catch {
+        // Storage erişimi yoksa sessizce devam et.
+      }
       window.location.href = '/'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Hesap silinemedi.')

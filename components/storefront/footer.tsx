@@ -61,17 +61,71 @@ export function Footer() {
   ])
   useEffect(() => {
     if (typeof window === 'undefined') return
-    try {
-      const raw = window.localStorage.getItem(NEWSLETTER_STORAGE_KEY)
-      if (!raw) return
-      const parsed = JSON.parse(raw) as { subscribed?: boolean; email?: string }
-      if (parsed?.subscribed && parsed?.email) {
-        setIsSubscribed(true)
-        setSubscribedEmail(String(parsed.email))
-        setSubscribeMessage('Kulübe hoş geldiniz! E-posta listesine eklendiniz.')
+
+    const loadFromStorage = () => {
+      try {
+        const raw = window.localStorage.getItem(NEWSLETTER_STORAGE_KEY)
+        if (!raw) {
+          setIsSubscribed(false)
+          setSubscribedEmail('')
+          setSubscribeMessage('')
+          return
+        }
+        const parsed = JSON.parse(raw) as { subscribed?: boolean; email?: string }
+        if (parsed?.subscribed && parsed?.email) {
+          setIsSubscribed(true)
+          setSubscribedEmail(String(parsed.email))
+          setSubscribeMessage('Kulübe hoş geldiniz! E-posta listesine eklendiniz.')
+        }
+      } catch {
+        // Ignore invalid stored data
       }
-    } catch {
-      // Ignore invalid stored data
+    }
+
+    loadFromStorage()
+
+    const handleNewsletterReset = () => {
+      try {
+        window.localStorage.removeItem(NEWSLETTER_STORAGE_KEY)
+      } catch {
+        // ignore
+      }
+      setIsSubscribed(false)
+      setSubscribedEmail('')
+      setSubscribeMessage('')
+      setEmail('')
+    }
+
+    // Hesap silindi veya çıkış yapıldıysa kulüp aboneliği görünümünü temizle.
+    const handleAuthChanged = async () => {
+      try {
+        const response = await fetch('/api/auth/session', { cache: 'no-store' })
+        const data = (await response.json()) as { authenticated?: boolean; customer?: { email?: string } }
+        if (!data?.authenticated) {
+          handleNewsletterReset()
+          return
+        }
+        // Oturum açıkken kulüpteki kayıtlı e-posta oturum e-postasından farklıysa stale veriyi temizle.
+        const sessionEmail = String(data?.customer?.email || '').trim().toLowerCase()
+        const raw = window.localStorage.getItem(NEWSLETTER_STORAGE_KEY)
+        if (!raw) return
+        const parsed = JSON.parse(raw) as { email?: string }
+        const storedEmail = String(parsed?.email || '').trim().toLowerCase()
+        if (sessionEmail && storedEmail && sessionEmail !== storedEmail) {
+          handleNewsletterReset()
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    window.addEventListener('auth:changed', handleAuthChanged)
+    window.addEventListener('eftalia:newsletter-reset', handleNewsletterReset)
+    void handleAuthChanged()
+
+    return () => {
+      window.removeEventListener('auth:changed', handleAuthChanged)
+      window.removeEventListener('eftalia:newsletter-reset', handleNewsletterReset)
     }
   }, [])
 

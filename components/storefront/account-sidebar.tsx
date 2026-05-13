@@ -60,6 +60,11 @@ export function AccountSidebar({
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
+    try {
+      window.dispatchEvent(new Event('auth:changed'))
+    } catch {
+      // ignore
+    }
     window.location.href = '/'
   }
 
